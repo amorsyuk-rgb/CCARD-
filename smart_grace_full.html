@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Smart Grace Dashboard — Cards, Transactions & Interest (EGP)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#0f1419;
+    --muted:#9aa6b2;
+    --text:#e6eef3;
+    --accent:#00a3ff;
+    --danger:#ff6b6b;
+    --warning:#ffb020;
+    --success:#22c55e;
+    --card-border: rgba(255,255,255,0.03);
+    --glass: rgba(255,255,255,0.02);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background:linear-gradient(180deg,#060708 0%, #071018 100%);
+    color:var(--text); padding:18px;
+  }
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  header h1{margin:0;font-size:20px}
+  .layout{display:grid;grid-template-columns:360px 1fr 420px;gap:18px}
+  .panel{background:var(--panel);border:1px solid var(--card-border);padding:14px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
+  input,select,textarea,button{width:100%;padding:9px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);font-size:14px}
+  button{background:linear-gradient(180deg,var(--accent),#0070d9);border:0;color:white;cursor:pointer}
+  .small{font-size:12px;color:var(--muted)}
+  .banks-list{margin-top:10px;display:flex;flex-direction:column;gap:8px;max-height:300px;overflow:auto}
+  .bank-item{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .bank-item:hover{background:rgba(255,255,255,0.02)}
+  .bank-name{font-weight:600}
+  .muted{color:var(--muted)}
+  .badge{padding:6px 8px;border-radius:999px;font-size:12px}
+  .badge.green{background:rgba(34,197,94,0.12);color:var(--success);border:1px solid rgba(34,197,94,0.12)}
+  .badge.orange{background:rgba(255,176,59,0.08);color:var(--warning);border:1px solid rgba(255,176,59,0.08)}
+  .badge.red{background:rgba(255,107,107,0.08);color:var(--danger);border:1px solid rgba(255,107,107,0.08)}
+  .tx-list{margin-top:10px;max-height:420px;overflow:auto}
+  .tx-row{display:flex;gap:8px;align-items:center;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);margin-bottom:8px}
+  .tx-amount{font-weight:700}
+  .flex{display:flex;gap:8px;align-items:center}
+  canvas{background:transparent;border-radius:8px}
+  .small-muted{font-size:12px;color:var(--muted)}
+  .controls-row{display:flex;gap:8px}
+  @media(max-width:1100){.layout{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Smart Grace Dashboard — EGP</h1>
+    <div class="small-muted">Multiple cards, transactions, automatic interest (simple & daily-compound)</div>
+  </div>
+  <div class="small-muted">Local storage only • Dark OKX-like theme</div>
+</header>
+
+<div class="layout">
+  <!-- Left: Banks management -->
+  <div class="panel">
+    <h3 style="margin:0">Banks / Cards</h3>
+    <div class="small-muted" style="margin-top:6px">Create or edit cards. Annual interest & default interest method used for overdue calculations.</div>
+
+    <label>Card name
+      <input id="bankName" placeholder="e.g. Samba Mastercard">
+    </label>
+
+    <label>Cycle start (purchase earliest date)
+      <input id="bankStart" type="date">
+    </label>
+
+    <label>Cycle end (last purchase date in cycle)
+      <input id="bankEnd" type="date">
+    </label>
+
+    <label>Due date (payment due date for this cycle)
+      <input id="bankDue" type="date">
+    </label>
+
+    <label>Annual interest rate (%) — e.g. 24
+      <input id="bankRate" type="number" step="0.01" placeholder="Annual %">
+    </label>
+
+    <label>Default interest method
+      <select id="bankInterestMethod">
+        <option value="simple">Simple interest (daily on principal)</option>
+        <option value="compound">Daily compounded interest</option>
+      </select>
+    </label>
+
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button id="saveBankBtn">Save / Update Card</button>
+      <button id="newBankBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)">New</button>
+    </div>
+
+    <div class="banks-list" id="banksList" aria-live="polite"></div>
+  </div>
+
+  <!-- Middle: Transactions + calendar + charts -->
+  <div class="panel">
+    <h3 style="margin:0">Transactions & Calendar</h3>
+    <div class="small-muted" style="margin-top:6px">Register purchases, then select a card to view transaction list and charts.</div>
+
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <select id="txBankSelect"></select>
+      <input id="txDate" type="date" style="width:160px">
+      <input id="txAmount" type="number" placeholder="Amount (EGP)" style="width:140px">
+    </div>
+
+    <label style="margin-top:8px">Description
+      <input id="txDesc" placeholder="Merchant or note">
+    </label>
+
+    <label style="margin-top:6px">Interest method (optional override)
+      <select id="txInterestMethod">
+        <option value="">Use bank default</option>
+        <option value="simple">Simple</option>
+        <option value="compound">Daily compound</option>
+      </select>
+    </label>
+
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button id="addTxBtn">Add Transaction</button>
+      <button id="clearTxBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)">Clear</button>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+      <div style="flex:1">
+        <div id="calendarSummary" class="small-muted">Select a card to build charts & list.</div>
+      </div>
+      <div>
+        <span class="small-muted">Intersection rate</span>
+        <div id="intersectionRate" style="font-weight:700">—</div>
+      </div>
+    </div>
+
+    <div id="txPanel" style="margin-top:12px;display:none">
+      <h4 style="margin:8px 0 6px 0">Transactions</h4>
+      <div class="tx-list" id="txList"></div>
+    </div>
+  </div>
+
+  <!-- Right: charts & summary per card -->
+  <div class="panel">
+    <h3 id="summaryTitle" style="margin:0">Card Summary</h3>
+    <div id="cardSummaryText" class="small-muted" style="margin-top:6px">Select a card to view charts.</div>
+
+    <div style="margin-top:10px">
+      <canvas id="graceTrend" height="220"></canvas>
+      <canvas id="weekBar" height="160"></canvas>
+    </div>
+
+    <div style="margin-top:10px">
+      <h4 style="margin:6px 0 4px 0">Totals</h4>
+      <table style="width:100%">
+        <tr><th class="small-muted">Outstanding principal</th><td id="sumPrincipal">EGP 0.00</td></tr>
+        <tr><th class="small-muted">Accrued interest</th><td id="sumInterest">EGP 0.00</td></tr>
+        <tr><th class="small-muted">Active / Near / Overdue</th><td id="counts">—</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Storage keys */
+const BANKS_KEY = 'sg_banks_v1';
+const TX_KEY = 'sg_tx_v1';
+
+/* Helpers */
+function loadBanks(){ try { return JSON.parse(localStorage.getItem(BANKS_KEY) || '[]'); } catch { return []; } }
+function saveBanks(b){ localStorage.setItem(BANKS_KEY,JSON.stringify(b)); }
+function loadTx(){ try { return JSON.parse(localStorage.getItem(TX_KEY) || '[]'); } catch { return []; } }
+function saveTx(t){ localStorage.setItem(TX_KEY,JSON.stringify(t)); }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function fmt(d){ return new Date(d).toLocaleDateString(); }
+function parseDate(v){ return v ? new Date(v + (v.length===10 ? 'T00:00:00' : '')) : null; }
+function daysDiff(a,b){ return Math.round((b - a) / (1000*60*60*24)); }
+function toEGP(v){ return 'EGP ' + Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+/* Calculation: interest */
+function calcSimpleInterest(amount, annualRatePercent, overdueDays){
+  const dailyRate = (annualRatePercent/100)/365;
+  return amount * dailyRate * overdueDays;
+}
+function calcCompoundInterest(amount, annualRatePercent, overdueDays){
+  const dailyRate = (annualRatePercent/100)/365;
+  const total = amount * Math.pow(1 + dailyRate, overdueDays);
+  return total - amount;
+}
+
+/* Render banks list and txBank select */
+function renderBanks(){
+  const banks = loadBanks();
+  const list = document.getElementById('banksList');
+  const select = document.getElementById('txBankSelect');
+  list.innerHTML = '';
+  select.innerHTML = '';
+  if(banks.length === 0){
+    list.innerHTML = '<div class="muted">No cards yet. Add a card above.</div>';
+    select.innerHTML = '<option value="">No card</option>';
+    return;
+  }
+  banks.forEach(b=>{
+    const div = document.createElement('div');
+    div.className = 'bank-item';
+    div.dataset.id = b.id;
+    div.innerHTML = `<div>
+      <div class="bank-name">${b.name}</div>
+      <div class="small-muted">${fmt(b.start)} → ${fmt(b.end)}</div>
+      <div class="small-muted">Due: ${fmt(b.due)} • ${b.rate}% • ${b.method}</div>
+    </div><div class="small muted">View</div>`;
+    div.onclick = ()=> selectBank(b.id);
+    list.appendChild(div);
+
+    const opt = document.createElement('option');
+    opt.value = b.id; opt.textContent = b.name;
+    select.appendChild(opt);
+  });
+}
+
+/* Save / Update bank */
+document.getElementById('saveBankBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('bankName').value.trim();
+  const start = document.getElementById('bankStart').value;
+  const end = document.getElementById('bankEnd').value;
+  const due = document.getElementById('bankDue').value;
+  const rate = parseFloat(document.getElementById('bankRate').value);
+  const method = document.getElementById('bankInterestMethod').value;
+  if(!name || !start || !end || !due || isNaN(rate)){ alert('Fill all fields (annual rate numeric).'); return; }
+  const banks = loadBanks();
+  const existing = banks.find(b => b.name.toLowerCase() === name.toLowerCase());
+  if(existing){
+    // update existing by id match if names identical, else create new
+    existing.start = start; existing.end = end; existing.due = due; existing.rate = rate; existing.method = method;
+  } else {
+    banks.push({ id: uid(), name, start, end, due, rate, method });
+  }
+  saveBanks(banks);
+  renderBanks();
+  document.getElementById('bankName').value=''; document.getElementById('bankStart').value=''; document.getElementById('bankEnd').value=''; document.getElementById('bankDue').value=''; document.getElementById('bankRate').value='';
+});
+
+/* New bank reset */
+document.getElementById('newBankBtn').addEventListener('click', ()=>{
+  document.getElementById('bankName').value=''; document.getElementById('bankStart').value=''; document.getElementById('bankEnd').value=''; document.getElementById('bankDue').value=''; document.getElementById('bankRate').value='';
+});
+
+/* Transactions handling */
+document.getElementById('addTxBtn').addEventListener('click', ()=>{
+  const bankId = document.getElementById('txBankSelect').value;
+  const date = document.getElementById('txDate').value;
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const desc = document.getElementById('txDesc').value.trim();
+  const methodOverride = document.getElementById('txInterestMethod').value || null;
+
+  if(!bankId){ alert('Select a card'); return; }
+  if(!date || isNaN(amount) || amount <= 0){ alert('Enter valid date and amount'); return; }
+
+  const banks = loadBanks();
+  const b = banks.find(x=>x.id===bankId);
+  if(!b){ alert('Selected bank not found'); return; }
+
+  // Validate that purchase date is within bank cycle
+  const pDate = parseDate(date);
+  const s = parseDate(b.start), e = parseDate(b.end);
+  if(pDate < s || pDate > e){ if(!confirm('Purchase date is outside the cycle. Add anyway?')) return; }
+
+  const txs = loadTx();
+  txs.push({
+    id: uid(),
+    bankId,
+    date: date,
+    amount: Number(amount.toFixed(2)),
+    desc,
+    methodOverride
+  });
+  saveTx(txs);
+  document.getElementById('txDate').value=''; document.getElementById('txAmount').value=''; document.getElementById('txDesc').value=''; document.getElementById('txInterestMethod').value='';
+  // refresh view if current selected bank
+  if(window._selectedBankId === bankId) selectBank(bankId);
+});
+
+/* Clear tx form */
+document.getElementById('clearTxBtn').addEventListener('click', ()=>{
+  document.getElementById('txDate').value=''; document.getElementById('txAmount').value=''; document.getElementById('txDesc').value='';
+});
+
+/* Select bank to view */
+window._selectedBankId = null;
+function selectBank(bankId){
+  window._selectedBankId = bankId;
+  const banks = loadBanks(); const b = banks.find(x=>x.id===bankId);
+  if(!b) return;
+  document.getElementById('summaryTitle').textContent = b.name + ' — Summary';
+  document.getElementById('cardSummaryText').textContent = `Cycle ${fmt(b.start)} → ${fmt(b.end)} • Due ${fmt(b.due)} • ${b.rate}% ${b.method}`;
+  buildTxPanel(b);
+  renderBanks();
+}
+
+/* Build transactions panel and charts for selected bank */
+function buildTxPanel(bank){
+  const txs = loadTx().filter(t => t.bankId === bank.id).sort((a,b)=> new Date(a.date) - new Date(b.date));
+  const panel = document.getElementById('txPanel');
+  const list = document.getElementById('txList');
+  panel.style.display = 'block';
+  list.innerHTML = '';
+  let sumPrincipal = 0, sumInterest = 0;
+  let counts = { active:0, near:0, overdue:0 };
+  const today = new Date();
+
+  txs.forEach(tx=>{
+    const purchase = parseDate(tx.date);
+    const due = parseDate(bank.due);
+    const grace = daysDiff(purchase, due);
+    const overdueDays = Math.max(0, daysDiff(due, today));
+    // if due in past relative to today, but interest should be computed based on days past due since due date
+    // Overdue days for this transaction = max(0, today - dueDate)
+    const overdueForTx = Math.max(0, daysDiff(due, today));
+    const method = tx.methodOverride || bank.method;
+    let interest = 0;
+    if(overdueForTx > 0){
+      if(method === 'simple') interest = calcSimpleInterest(tx.amount, bank.rate, overdueForTx);
+      else interest = calcCompoundInterest(tx.amount, bank.rate, overdueForTx);
+    }
+    const totalDue = tx.amount + interest;
+    sumPrincipal += tx.amount;
+    sumInterest += interest;
+
+    // status
+    const status = (daysDiff(today, due) < 0) ? 'active' : (daysDiff(today, due) <= 5 ? 'near' : 'overdue');
+    if(status === 'active') counts.active++;
+    else if(status === 'near') counts.near++;
+    else counts.overdue++;
+
+    const txDiv = document.createElement('div');
+    txDiv.className = 'tx-row';
+    txDiv.innerHTML = `
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:700">${tx.desc || 'Purchase'}</div>
+            <div class="small-muted">${fmt(purchase)} • Due ${fmt(due)} • Grace ${grace}d</div>
+          </div>
+          <div style="text-align:right">
+            <div class="tx-amount">${toEGP(tx.amount)}</div>
+            <div class="small-muted">Interest: ${toEGP(interest)}</div>
+            <div class="small-muted">Total: ${toEGP(totalDue)}</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <div class="badge ${status==='active'?'green':status==='near'?'orange':'red'}">${status.toUpperCase()}</div>
+          <button data-id="${tx.id}" class="editTxBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)">Edit</button>
+          <button data-id="${tx.id}" class="delTxBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)">Delete</button>
+        </div>
+      </div>`;
+    list.appendChild(txDiv);
+  });
+
+  document.querySelectorAll('.delTxBtn').forEach(b=>{
+    b.onclick = (e) => {
+      const id = e.currentTarget.dataset.id;
+      if(!confirm('Delete transaction?')) return;
+      const txsAll = loadTx().filter(t=>t.id!==id);
+      saveTx(txsAll);
+      buildTxPanel(bank);
+    };
+  });
+
+  document.querySelectorAll('.editTxBtn').forEach(b=>{
+    b.onclick = (e) => {
+      const id = e.currentTarget.dataset.id;
+      const tx = loadTx().find(t=>t.id===id);
+      if(!tx) return;
+      // Populate form for edit (simple replace by delete + new)
+      document.getElementById('txBankSelect').value = tx.bankId;
+      document.getElementById('txDate').value = tx.date;
+      document.getElementById('txAmount').value = tx.amount;
+      document.getElementById('txDesc').value = tx.desc;
+      document.getElementById('txInterestMethod').value = tx.methodOverride || '';
+      // delete it now; user can click Add to re-add changes
+      const txsAll = loadTx().filter(t=>t.id!==id);
+      saveTx(txsAll);
+      buildTxPanel(bank);
+    };
+  });
+
+  // Summaries & totals
+  document.getElementById('sumPrincipal').textContent = toEGP(sumPrincipal);
+  document.getElementById('sumInterest').textContent = toEGP(sumInterest);
+  document.getElementById('counts').textContent = `${counts.active} / ${counts.near} / ${counts.overdue}`;
+  // intersection rate = percentage of transactions whose due < today (i.e., overdue)
+  const intersect = txs.length === 0 ? 0 : (counts.overdue / txs.length * 100).toFixed(1);
+  document.getElementById('intersectionRate').textContent = `${intersect}% (${counts.overdue} overdue)`;
+
+  // build charts
+  buildChartsForBank(bank, txs);
+}
+
+/* Charts */
+let trendChart = null, weekChart = null;
+function buildChartsForBank(bank, transactions){
+  // Build grace trend across cycle (use all days or transactions)
+  const start = parseDate(bank.start);
+  const end = parseDate(bank.end);
+  const labels = [];
+  const graceData = [];
+  const txMap = {};
+  transactions.forEach(t => { txMap[t.date] = (txMap[t.date] || 0) + t.amount; });
+
+  // grace for each purchase date (if multiple tx same day, sum amount shown by tooltip)
+  for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
+    labels.push(fmt(d));
+    const g = daysDiff(d, parseDate(bank.due));
+    graceData.push(g);
+  }
+
+  // Trend chart with tooltip showing potential transactions and interest if overdue
+  const ctx = document.getElementById('graceTrend').getContext('2d');
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Grace days', data: graceData, borderColor: 'rgba(0,163,255,0.95)', backgroundColor: 'rgba(0,163,255,0.12)', fill:true, tension:0.2 }] },
+    options: {
+      responsive:true,
+      plugins:{
+        tooltip:{
+          callbacks:{
+            title: (items) => items[0].label,
+            label: (ctxItem) => {
+              const label = ctxItem.dataset.label || '';
+              const idx = ctxItem.dataIndex;
+              const dateStr = labels[idx];
+              // if transactions on that date, show sum
+              const txsOnDate = transactions.filter(t => t.date === transactionsFindDateKey(labels[idx]));
+              const sumAmt = txsOnDate.reduce((s,tx)=>s+tx.amount,0);
+              const g = graceData[idx];
+              const due = parseDate(bank.due);
+              const purchase = parseDateFromLabel(labels[idx]);
+              let out = [];
+              out.push(`Grace: ${g} days`);
+              if(sumAmt>0) out.push(`Tx amount: EGP ${sumAmt.toFixed(2)}`);
+              return out;
+            }
+          }
+        },
+        title:{display:true,text:'Grace trend for cycle'}
+      },
+      scales:{y:{title:{display:true,text:'Days of grace'}}}
+    }
+  });
+
+  // This week bar chart: find week range from today and extract grace for those days
+  const today = new Date();
+  const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate()-today.getDay()); startOfWeek.setHours(0,0,0,0);
+  const weekLabels = []; const weekVals = [];
+  for(let d=new Date(startOfWeek); d<=new Date(startOfWeek.getTime()+6*24*3600*1000); d.setDate(d.getDate()+1)){
+    weekLabels.push(fmt(d));
+    weekVals.push(daysDiff(d, parseDate(bank.due)));
+  }
+  const ctx2 = document.getElementById('weekBar').getContext('2d');
+  if(weekChart) weekChart.destroy();
+  weekChart = new Chart(ctx2, {
+    type: 'bar',
+    data: { labels: weekLabels, datasets: [{ label: "This week's grace days", data: weekVals, backgroundColor: 'rgba(34,197,94,0.9)' }] },
+    options: { plugins:{title:{display:true,text:"This Week's Grace Overview"}}, scales:{y:{beginAtZero:true, title:{display:true,text:'Days'}}} }
+  });
+
+  // helper closures
+  function parseDateFromLabel(lbl){
+    // label is locale string; attempt to parse by building from the cycle start + index mapping
+    // We'll find a date in transactions matching the label
+    const t = transactions.find(tx => fmt(parseDate(tx.date)) === lbl);
+    if(t) return parseDate(t.date);
+    // fallback: parse Date from label
+    return new Date(lbl);
+  }
+  function transactionsFindDateKey(lbl){
+    // return tx.date matching label or label itself
+    const found = transactions.find(tx => fmt(parseDate(tx.date)) === lbl);
+    return found ? found.date : lbl;
+  }
+}
+
+/* Utility to remove timezone artifacts when reading date labels */
+function parseDateFromInput(v){
+  if(!v) return null;
+  return new Date(v + 'T00:00:00');
+}
+
+/* Initial render */
+renderBanks();
+
+/* Auto-select first bank if exists */
+const banksNow = loadBanks();
+if(banksNow.length) {
+  document.getElementById('txBankSelect').value = banksNow[0].id;
+  selectBank(banksNow[0].id);
+}
+
+/* Export / import (optional) - quick JSON export buttons could be added later */
+/* End of script */
+</script>
+</body>
+</html>
