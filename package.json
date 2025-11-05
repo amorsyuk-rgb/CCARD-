@@ -1,8 +1,7 @@
 {
-  "name": "gracewise-dashboard-v5",
+  "name": "gracewise-dashboard-v5-full",
   "version": "5.0.0",
   "type": "module",
-  "description": "GraceWise v5 \u2014 Smart Credit Dashboard with Grace Simulator",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

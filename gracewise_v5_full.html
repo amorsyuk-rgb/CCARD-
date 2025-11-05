@@ -1,0 +1,77 @@
+\
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>GraceWise v5 Full</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--cib-blue:#005BAC;--cib-orange:#F37021;--cib-bg:#F8F9FB;--cib-text:#1B1B1B;--okx-bg:#0b0f14;--okx-text:#e6eef3;--muted:#76808a}
+body{font-family:Inter;margin:0;background:var(--cib-bg);color:var(--cib-text)}
+.header{background:linear-gradient(90deg,var(--cib-blue),var(--cib-orange));padding:12px;color:white;display:flex;justify-content:space-between;align-items:center}
+.container{max-width:1100px;margin:12px auto;padding:8px}
+.panel{background:white;padding:12px;border-radius:10px;box-shadow:0 6px 20px rgba(10,20,30,0.04);margin-bottom:12px}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;height:64px;background:#fff;display:flex;justify-content:space-around;align-items:center;border-top:1px solid #e6e9ee}
+.nav-item{cursor:pointer;color:#666;font-weight:600}
+#splash{position:fixed;inset:0;background:linear-gradient(90deg,var(--cib-blue),var(--cib-orange));display:flex;align-items:center;justify-content:center;flex-direction:column;color:white;z-index:9999}
+.splash-box{font-size:48px;font-weight:800;padding:20px;border-radius:12px;border:3px solid rgba(255,255,255,0.2)}
+.progress-wrap{width:100%;height:10px;background:#eee;border-radius:6px;overflow:hidden;margin-top:8px}
+.progress-bar{height:100%;width:0%;transition:width 0.3s}
+</style>
+</head>
+<body>
+<div id="splash"><div class="splash-box">GW</div><div>GraceWise — Smart Credit Dashboard</div></div>
+<div id="app" class="container" style="display:none">
+  <div class="header"><div style="font-weight:800">GraceWise</div><div><button id="themeToggle">Theme</button></div></div>
+  <div class="panel" id="cardsPanel"><h3>Cards / Banks</h3>
+    <label>Card name<input id="bankName"></label>
+    <label>Cycle End (day)<input id="bankEnd" type="date"></label>
+    <label>Due Date (day)<input id="bankDue" type="date"></label>
+    <label>Annual Rate<input id="bankRate" type="number"></label>
+    <button id="saveBank">Save</button>
+    <div id="banksList"></div>
+  </div>
+
+  <div class="panel" id="transactionsPanel"><h3>Transactions</h3>
+    <select id="txCard"></select><input id="txDate" type="date"><input id="txAmount" type="number" placeholder="EGP">
+    <button id="addTx">Add Tx</button>
+    <div id="txList"></div>
+  </div>
+
+  <div class="panel" id="gracePanel"><h3>Grace Analysis</h3>
+    <select id="analysisCard"></select><input id="analysisDate" type="date"><button id="analysisNow">Calc</button>
+    <div id="analysisSummary"></div>
+    <div class="progress-wrap"><div id="analysisProgress" class="progress-bar"></div></div>
+    <canvas id="analysisWeekChart" style="margin-top:12px"></canvas>
+  </div>
+
+  <div class="panel" id="insightsPanel"><h3>Insights</h3><div id="insightsContent"></div></div>
+
+</div>
+<div class="bottom-nav"><div class="nav-item" data-target="cardsPanel">Cards</div><div class="nav-item" data-target="transactionsPanel">Tx</div><div class="nav-item active" data-target="gracePanel">Grace</div><div class="nav-item" data-target="insightsPanel">Insights</div></div>
+
+<script>
+const BANKS_KEY='gw_v4_banks', TX_KEY='gw_v4_tx', THEME_KEY='gw_v4_theme';
+function uid(){return Math.random().toString(36).slice(2,9)}
+function load(k){try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return[]}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function setVal(k,v){localStorage.setItem(k,v)}
+function getVal(k){return localStorage.getItem(k)}
+function fmt(d){return d?new Date(d).toLocaleDateString():'-'}
+function daysDiff(a,b){return Math.round((b-a)/(1000*60*60*24))}
+function applyTheme(){/* noop for brevity */}
+window.addEventListener('load',()=>{setTimeout(()=>{document.getElementById('splash').style.display='none';document.getElementById('app').style.display='block';init();},700)});
+function init(){ bindUI(); renderBanks(); renderTxCards(); populateAnalysisCards(); const iso=new Date().toISOString().slice(0,10); document.getElementById('analysisDate').value=iso; }
+function bindUI(){ document.getElementById('saveBank').onclick=saveBank; document.getElementById('addTx').onclick=addTx; document.getElementById('analysisNow').onclick=updateGraceAnalysis; document.querySelectorAll('.bottom-nav .nav-item').forEach(n=>n.addEventListener('click', ()=>{ document.querySelectorAll('.panel').forEach(p=>p.style.display='none'); document.getElementById(n.dataset.target).style.display='block'; document.querySelectorAll('.bottom-nav .nav-item').forEach(x=>x.classList.remove('active')); n.classList.add('active'); })); }
+function renderBanks(){ const banks=load(BANKS_KEY); const container=document.getElementById('banksList'); container.innerHTML=''; const sel=document.getElementById('analysisCard'); sel.innerHTML=''; const txsel=document.getElementById('txCard'); txsel.innerHTML=''; if(!banks.length){ container.innerHTML='<div>No banks</div>'; return;} banks.forEach(b=>{ const d=document.createElement('div'); d.textContent=b.name+' - due:'+b.due; container.appendChild(d); const opt=document.createElement('option'); opt.value=b.id; opt.textContent=b.name; sel.appendChild(opt); const opt2=document.createElement('option'); opt2.value=b.id; opt2.textContent=b.name; txsel.appendChild(opt2); }); }
+function saveBank(){ const name=document.getElementById('bankName').value; const end=document.getElementById('bankEnd').value; const due=document.getElementById('bankDue').value; const rate=parseFloat(document.getElementById('bankRate').value)||0; if(!name||!end||!due){alert('fill');return;} const banks=load(BANKS_KEY); banks.push({id:uid(),name,start:end,end:end,due:due,rate:rate,method:'simple'}); save(BANKS_KEY,banks); renderBanks(); alert('saved'); }
+function renderTxCards(){ const banks=load(BANKS_KEY); const txsel=document.getElementById('txCard'); txsel.innerHTML=''; banks.forEach(b=>{ const opt=document.createElement('option'); opt.value=b.id; opt.textContent=b.name; txsel.appendChild(opt); }); }
+function addTx(){ const bankId=document.getElementById('txCard').value; const date=document.getElementById('txDate').value; const amt=parseFloat(document.getElementById('txAmount').value)||0; if(!bankId||!date||!amt){alert('fill');return;} const txs=load(TX_KEY); txs.push({id:uid(),bankId:bankId,date:date,amount:amt,desc:''}); save(TX_KEY,txs); alert('added'); }
+function populateAnalysisCards(){ const sel=document.getElementById('analysisCard'); sel.innerHTML=''; const banks=load(BANKS_KEY); if(!banks.length){ sel.innerHTML='<option>No cards</option>'; return;} banks.forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.textContent=b.name; sel.appendChild(o); }); }
+function calculateDueForCycle(bank,purchaseDate){ const endDay=new Date(bank.end).getDate(); const dueDay=new Date(bank.due).getDate(); const purchase=new Date(purchaseDate.getFullYear(),purchaseDate.getMonth(),purchaseDate.getDate()); let cycleEndMonth=purchase.getMonth(); let cycleEndYear=purchase.getFullYear(); if(purchase.getDate()>endDay){ cycleEndMonth++; if(cycleEndMonth>11){cycleEndMonth=0;cycleEndYear++;}} const cycleEnd=new Date(cycleEndYear,cycleEndMonth,endDay); let dueMonth=cycleEnd.getMonth()+1; let dueYear=cycleEnd.getFullYear(); if(dueMonth>11){dueMonth=0;dueYear++;} const daysInMonth=new Date(dueYear,dueMonth+1,0).getDate(); const dueDayAdjusted=Math.min(dueDay,daysInMonth); const due=new Date(dueYear,dueMonth,dueDayAdjusted); return {cycleEnd:cycleEnd,due:due}; }
+function updateGraceAnalysis(){ const sel=document.getElementById('analysisCard'); const banks=load(BANKS_KEY); if(!banks.length){ document.getElementById('analysisSummary').innerHTML='No cards'; return;} const bank=banks.find(b=>b.id===sel.value)||banks[0]; const purchaseInput=document.getElementById('analysisDate').value; if(!purchaseInput){ document.getElementById('analysisSummary').innerHTML='Select date'; return; } const purchase=new Date(purchaseInput+'T00:00:00'); const calc=calculateDueForCycle(bank,purchase); const cycleEnd=calc.cycleEnd; const due=calc.due; const graceDays=daysDiff(purchase,due); const today=new Date(); const daysLeft=daysDiff(today,due); let prog=0; if(graceDays>0){ const elapsed=daysDiff(purchase,today); prog=Math.round(Math.max(0,Math.min(100,(elapsed/graceDays)*100))); } else prog=100; let html='<div>Purchase: '+purchase.toLocaleDateString()+'</div>'; html+='<div>Cycle ends: '+cycleEnd.toLocaleDateString()+'</div>'; html+='<div>Due: '+due.toLocaleDateString()+'</div>'; html+='<div>Grace period: '+graceDays+' days</div>'; if(daysLeft>=0){ html+='<div>Grace window closes in: '+daysLeft+' days</div>'; } else{ html+='<div style="color:red">Grace window expired</div>'; } document.getElementById('analysisSummary').innerHTML=html; const progEl=document.getElementById('analysisProgress'); progEl.style.width=prog+'%'; buildGraceWeekChart(due); }
+let analysisWeekChart=null;
+function buildGraceWeekChart(due){ const ctx=document.getElementById('analysisWeekChart').getContext('2d'); const today=new Date(); const start=new Date(today); start.setDate(today.getDate()-today.getDay()); start.setHours(0,0,0,0); const labels=[]; const data=[]; for(let i=0;i<7;i++){ const d=new Date(start); d.setDate(start.getDate()+i); labels.push(d.toLocaleDateString('en-US',{weekday:'short'})); data.push(daysDiff(d,due)); } if(analysisWeekChart) analysisWeekChart.destroy(); analysisWeekChart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Grace days',data:data,backgroundColor:'#005BAC'}]},options:{responsive:true,plugins:{legend:{display:false},title:{display:true,text:\"This Week's Grace Overview\"}}}}); }
+
+</script>
+</body></html>
