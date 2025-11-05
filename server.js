@@ -1,0 +1,14 @@
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const app = express();
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => res.redirect('/cards'));
+app.get('/cards', (req,res)=>res.sendFile(path.join(__dirname,'public','cards.html')));
+app.get('/transactions', (req,res)=>res.sendFile(path.join(__dirname,'public','transactions.html')));
+app.get('/grace', (req,res)=>res.sendFile(path.join(__dirname,'public','grace.html')));
+app.get('/settings', (req,res)=>res.sendFile(path.join(__dirname,'public','settings.html')));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, ()=>console.log(`GraceWise v5.5 Pro serving on port ${PORT}`));

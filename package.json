@@ -1,0 +1,12 @@
+{
+  "name": "gracewise-v5-5-pro",
+  "version": "5.5.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
