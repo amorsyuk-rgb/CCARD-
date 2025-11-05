@@ -1,8 +1,8 @@
 {
-  "name": "smart-grace-v2-dashboard",
-  "version": "2.0.0",
+  "name": "gracewise-dashboard",
+  "version": "3.0.0",
   "type": "module",
-  "description": "Smart Grace Dashboard v2 - EGP tracker with themes & mobile",
+  "description": "GraceWise \u2014 Smart Credit Dashboard (EGP)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

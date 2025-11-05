@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>GraceWise — Smart Credit Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --cib-blue:#005BAC;
+  --cib-orange:#F37021;
+  --cib-bg:#F8F9FB;
+  --cib-text:#1B1B1B;
+  --okx-bg:#0b0f14;
+  --okx-text:#e6eef3;
+  --accent:#00a3ff;
+  --success:#22c55e;
+  --danger:#ff6b6b;
+}
+
+/* base */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--cib-bg);color:var(--cib-text);-webkit-font-smoothing:antialiased}
+.container{max-width:1200px;margin:18px auto;padding:12px}
+
+/* header / gradient like CIB */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px;border-radius:10px;
+  background:linear-gradient(90deg,var(--cib-blue),var(--cib-orange));
+  color:white;box-shadow:0 6px 24px rgba(5,30,60,0.18);
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo-wrap{width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.logo{font-weight:700;color:white;font-size:20px;letter-spacing:1px}
+.title{font-weight:600}
+.subtitle{font-size:12px;opacity:0.92}
+
+/* theme toggle */
+.controls{display:flex;gap:8px;align-items:center}
+.btn{background:rgba(255,255,255,0.12);border:0;color:white;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+.small{font-size:13px;color:rgba(255,255,255,0.9)}
+
+/* layout */
+.grid{display:grid;grid-template-columns:320px 1fr;gap:16px;margin-top:16px}
+.panel{background:white;border-radius:10px;padding:12px;box-shadow:0 6px 20px rgba(10,20,30,0.05)}
+.dark .panel{background:#0f1419;color:var(--okx-text)}
+
+/* inputs */
+label{display:block;font-size:13px;color:#666;margin-top:8px}
+input,select,button,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ee;background:white;font-size:14px}
+.dark input,.dark select,.dark textarea{background:#0b0f14;border:1px solid rgba(255,255,255,0.04);color:var(--okx-text)}
+.row{display:flex;gap:8px}
+.row .col{flex:1}
+
+/* banks list */
+.bank-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;border:1px solid #eef2f5;margin-top:8px;cursor:pointer}
+.dark .bank-item{border-color:rgba(255,255,255,0.03);background:transparent}
+
+/* tx list */
+.tx-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;border:1px solid #eef2f5;margin-top:8px}
+.dark .tx-row{border-color:rgba(255,255,255,0.03)}
+
+/* badges */
+.badge{padding:6px 8px;border-radius:999px;font-weight:700;font-size:12px}
+.badge.active{background:rgba(34,197,94,0.12);color:var(--success);border:1px solid rgba(34,197,94,0.08)}
+.badge.near{background:rgba(255,176,59,0.08);color:var(--cib-orange);border:1px solid rgba(255,176,59,0.08)}
+.badge.over{background:rgba(255,107,107,0.08);color:var(--danger);border:1px solid rgba(255,107,107,0.08)}
+
+/* charts */
+canvas{max-width:100%;height:240px}
+
+/* footer small */
+.footer{margin-top:12px;font-size:12px;color:#666}
+
+/* splash screen */
+#splash{position:fixed;inset:0;background:linear-gradient(90deg,var(--cib-blue),var(--cib-orange));display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;color:white}
+.logo-anim{width:110px;height:110px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.06);position:relative}
+.gw{font-weight:800;font-size:42px;letter-spacing:1px;display:inline-block;transform-origin:center;animation:gw-anim 1.6s ease both}
+@keyframes gw-anim{
+  0%{transform:rotateX(0deg) scale(0.7) translateY(0);opacity:0}
+  50%{transform:rotateX(20deg) scale(1.08) translateY(-6px);opacity:1}
+  100%{transform:rotateX(0deg) scale(1) translateY(0);opacity:1}
+}
+.splash-sub{margin-top:10px;opacity:0.95}
+
+/* responsive */
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr;padding-bottom:80px}
+  .header{flex-direction:column;align-items:flex-start;gap:10px}
+  .brand .title{font-size:16px}
+  .logo-wrap{width:48px;height:48px}
+  canvas{height:200px}
+}
+
+/* dark theme overrides for header */
+.dark .header{background:linear-gradient(90deg,#071025,#00122b);color:var(--okx-text)}
+.dark .btn{background:rgba(255,255,255,0.06);color:var(--okx-text)}
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="logo-anim"><div class="gw">GW</div></div>
+  <div class="splash-sub">GraceWise — Smart Credit Dashboard</div>
+</div>
+
+<div id="app" class="container" style="display:none">
+  <div class="header" id="headerBar">
+    <div class="brand">
+      <div class="logo-wrap"><div class="logo">GW</div></div>
+      <div>
+        <div class="title">GraceWise</div>
+        <div class="subtitle">Smart Credit Dashboard</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="themeToggle">🌓 Switch Theme</button>
+      <button class="btn" id="exportBtn">Export JSON</button>
+    </div>
+  </div>
+
+  <div class="grid" id="mainGrid">
+    <div class="panel" id="leftPanel">
+      <h3>Cards / Banks</h3>
+      <div class="small">Create or edit cards. Annual rate & default interest method.</div>
+
+      <label>Card name<input id="bankName" placeholder="e.g. CIB Mastercard"></label>
+      <label>Cycle Start<input id="bankStart" type="date"></label>
+      <label>Cycle End<input id="bankEnd" type="date"></label>
+      <label>Due Date<input id="bankDue" type="date"></label>
+      <label>Annual Rate (%)<input id="bankRate" type="number" step="0.01" placeholder="e.g. 24"></label>
+      <label>Default Interest Method
+        <select id="bankMethod"><option value="simple">Simple</option><option value="compound">Compound (daily)</option></select>
+      </label>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="saveBank">Save / Update</button>
+        <button id="newBank" style="background:#f3f4f6;color:#111">New</button>
+      </div>
+      <div id="banksList"></div>
+    </div>
+
+    <div class="panel" id="rightPanel">
+      <h3>Transactions</h3>
+      <div class="small">Register purchase transactions linked to a chosen card.</div>
+      <div class="row" style="margin-top:8px">
+        <div class="col"><select id="txCard"></select></div>
+        <div style="width:140px"><input id="txDate" type="date"></div>
+        <div style="width:140px"><input id="txAmount" type="number" placeholder="EGP"></div>
+      </div>
+      <label>Description<input id="txDesc" placeholder="Merchant or note"></label>
+      <label>Interest method override<select id="txMethod"><option value="">Use card default</option><option value="simple">Simple</option><option value="compound">Compound</option></select></label>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="addTx">Add Transaction</button>
+        <button id="clearTx" style="background:#f3f4f6;color:#111">Clear</button>
+      </div>
+
+      <div id="txPanel" style="margin-top:12px;display:none">
+        <h4>Transactions list</h4>
+        <div id="txList"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <h4>Charts & Analysis</h4>
+        <canvas id="trendChart"></canvas>
+        <canvas id="weekChart" style="margin-top:10px"></canvas>
+        <div class="footer">Tip: hover points to see Purchase → Due → Grace → Interest</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Utilities
+const STORAGE_BANKS = 'gw_banks_v3';
+const STORAGE_TX = 'gw_txs_v3';
+const STORAGE_THEME = 'gw_theme_v3';
+
+function uid(){return Math.random().toString(36).slice(2,9)}
+function loadBanks(){try{return JSON.parse(localStorage.getItem(STORAGE_BANKS)||'[]')}catch{return[]}}
+function saveBanks(b){localStorage.setItem(STORAGE_BANKS,JSON.stringify(b))}
+function loadTx(){try{return JSON.parse(localStorage.getItem(STORAGE_TX)||'[]')}catch{return[]}}
+function saveTx(t){localStorage.setItem(STORAGE_TX,JSON.stringify(t))}
+function fmt(d){return new Date(d).toLocaleDateString()}
+function parseDate(v){return v?new Date(v+'T00:00:00'):null}
+function daysDiff(a,b){return Math.round((b-a)/(1000*60*60*24))}
+function toEGP(n){return 'EGP '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+
+// interest calculations
+function simpleInterest(amount,annualRate,days){const daily=(annualRate/100)/365;return amount*daily*days}
+function compoundInterest(amount,annualRate,days){const daily=(annualRate/100)/365;return amount*(Math.pow(1+daily,days)-1)}
+
+// theme handling
+let theme = localStorage.getItem(STORAGE_THEME)||'cib'; // 'cib' or 'dark'
+function applyTheme(){
+  if(theme==='dark'){document.documentElement.classList.add('dark');document.body.style.background = 'linear-gradient(180deg,#02040a,#071018)';}
+  else{document.documentElement.classList.remove('dark');document.body.style.background='var(--cib-bg)';}
+  // header colors adjust
+  const header = document.querySelector('.header');
+  if(theme==='dark'){
+    header.style.background='linear-gradient(90deg,#071025,#00122b)';
+  } else {
+    header.style.background='linear-gradient(90deg,var(--cib-blue),var(--cib-orange))';
+  }
+  localStorage.setItem(STORAGE_THEME,theme);
+}
+
+// splash
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    document.getElementById('splash').style.transition='opacity .45s ease';document.getElementById('splash').style.opacity='0';
+    setTimeout(()=>{document.getElementById('splash').style.display='none';document.getElementById('app').style.display='block'},500);
+  },900);
+  initApp();
+});
+
+// DOM refs & charts
+let trendChart=null, weekChart=null;
+const refs = {
+  bankName: document.getElementById('bankName'),
+  bankStart: document.getElementById('bankStart'),
+  bankEnd: document.getElementById('bankEnd'),
+  bankDue: document.getElementById('bankDue'),
+  bankRate: document.getElementById('bankRate'),
+  bankMethod: document.getElementById('bankMethod'),
+  saveBank: document.getElementById('saveBank'),
+  newBank: document.getElementById('newBank'),
+  banksList: document.getElementById('banksList'),
+
+  txCard: document.getElementById('txCard'),
+  txDate: document.getElementById('txDate'),
+  txAmount: document.getElementById('txAmount'),
+  txDesc: document.getElementById('txDesc'),
+  txMethod: document.getElementById('txMethod'),
+  addTx: document.getElementById('addTx'),
+  clearTx: document.getElementById('clearTx'),
+  txList: document.getElementById('txList'),
+  txPanel: document.getElementById('txPanel')
+}
+
+// init
+function initApp(){
+  applyTheme();
+  renderBanks();
+  bindActions();
+  // preselect first bank in selector
+  const banks=loadBanks(); if(banks.length) refs.txCard.value=banks[0].id;
+  // initial charts refresh if bank exists
+  if(banks.length) selectBank(banks[0].id);
+}
+
+// render banks list
+function renderBanks(){
+  const banks=loadBanks(); refs.banksList.innerHTML=''; refs.txCard.innerHTML='';
+  if(!banks.length){refs.banksList.innerHTML='<div class="small">No cards yet.</div>'; refs.txCard.innerHTML='<option value="">No card</option>'; return;}
+  banks.forEach(b=>{
+    const div=document.createElement('div'); div.className='bank-item';
+    div.innerHTML=`<div><strong>${b.name}</strong><div class="small">${fmt(b.start)} → ${fmt(b.end)}</div><div class="small">Due ${fmt(b.due)} • ${b.rate}% • ${b.method}</div></div><div><button class="btn small" data-id="${b.id}">Open</button></div>`;
+    div.querySelector('button').onclick=()=>selectBank(b.id);
+    refs.banksList.appendChild(div);
+    const opt=document.createElement('option'); opt.value=b.id; opt.textContent=b.name; refs.txCard.appendChild(opt);
+  });
+}
+
+// bind actions
+function bindActions(){
+  document.getElementById('themeToggle').addEventListener('click',()=>{ theme = (theme==='cib'?'dark':'cib'); applyTheme(); });
+  document.getElementById('exportBtn').addEventListener('click',()=>{ const data={banks:loadBanks(),tx:loadTx(),theme}; const url='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data)); const a=document.createElement('a'); a.href=url; a.download='gracewise_export.json'; a.click(); });
+
+  refs.saveBank.addEventListener('click',()=>{
+    const name=refs.bankName.value.trim(); const start=refs.bankStart.value; const end=refs.bankEnd.value; const due=refs.bankDue.value; const rate=parseFloat(refs.bankRate.value); const method=refs.bankMethod.value;
+    if(!name||!start||!end||!due||isNaN(rate)){alert('Fill all card fields');return;}
+    const banks=loadBanks(); const existing=banks.find(x=>x.name.toLowerCase()===name.toLowerCase());
+    if(existing){ existing.start=start; existing.end=end; existing.due=due; existing.rate=rate; existing.method=method; }
+    else{ banks.push({id:uid(),name,start,end,due,rate,method}); }
+    saveBanks(banks); renderBanks(); refs.bankName.value=''; refs.bankStart.value=''; refs.bankEnd.value=''; refs.bankDue.value=''; refs.bankRate.value=''; refs.bankMethod.value='simple';
+  });
+
+  refs.newBank.addEventListener('click',()=>{ refs.bankName.value=''; refs.bankStart.value=''; refs.bankEnd.value=''; refs.bankDue.value=''; refs.bankRate.value=''; });
+
+  refs.addTx.addEventListener('click',()=>{
+    const bankId=refs.txCard.value; const date=refs.txDate.value; const amt=parseFloat(refs.txAmount.value); const desc=refs.txDesc.value.trim(); const method=refs.txMethod.value||null;
+    if(!bankId||!date||isNaN(amt)||amt<=0){alert('Fill transaction fields');return;}
+    const banks=loadBanks(); const b=banks.find(x=>x.id===bankId); if(!b){alert('Card not found');return;}
+    const p=parseDate(date); const s=parseDate(b.start); const e=parseDate(b.end);
+    if(p < s || p > e){ if(!confirm('Purchase date outside cycle. Add anyway?')) return; }
+    const txs=loadTx(); txs.push({id:uid(),bankId,date,amount:Math.round(amt*100)/100,desc,methodOverride:method}); saveTx(txs);
+    refs.txDate.value=''; refs.txAmount.value=''; refs.txDesc.value=''; refs.txMethod.value='';
+    if(window._selectedBank===bankId) selectBank(bankId);
+  });
+
+  refs.clearTx.addEventListener('click',()=>{ refs.txDate.value=''; refs.txAmount.value=''; refs.txDesc.value=''; refs.txMethod.value=''; });
+}
+
+// select bank -> build tx panel + charts
+window._selectedBank = null;
+function selectBank(bankId){
+  window._selectedBank = bankId;
+  const banks=loadBanks(); const b=banks.find(x=>x.id===bankId); if(!b) return;
+  document.getElementById('txPanel').style.display='block';
+  buildTxPanel(b);
+}
+
+// build tx panel
+function buildTxPanel(bank){
+  const txs = loadTx().filter(t=>t.bankId===bank.id).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  refs.txList.innerHTML=''; let sumP=0,sumI=0; let counts={active:0,near:0,over:0}; const today=new Date();
+  txs.forEach(tx=>{
+    const purchase=parseDate(tx.date); const due=parseDate(bank.due); const grace=daysDiff(purchase,due);
+    const overdue = Math.max(0, daysDiff(due,today));
+    const method = tx.methodOverride || bank.method; let interest=0; let total=tx.amount;
+    if(overdue>0){
+      if(method==='compound') interest = compoundInterest(tx.amount,bank.rate,overdue);
+      else interest = simpleInterest(tx.amount,bank.rate,overdue);
+      total = tx.amount + interest;
+    }
+    sumP+=tx.amount; sumI+=interest;
+    const status = daysDiff(today,due) < 0 ? 'active' : (daysDiff(today,due) <= 5 ? 'near' : 'over');
+    counts[status==='active'?'active':status==='near'?'near':'over']++;
+    const div=document.createElement('div'); div.className='tx-row';
+    div.innerHTML = `<div><strong>${tx.desc||'Purchase'}</strong><div class="small">${fmt(purchase)} • Due ${fmt(due)} • Grace ${grace}d</div></div><div style="text-align:right"><div style="font-weight:700">${toEGP(tx.amount)}</div><div class="small">Interest: ${toEGP(interest)}</div><div class="small">Total: ${toEGP(total)}</div><div style="margin-top:8px"><span class="badge ${status==='active'?'active':status==='near'?'near':'over'}">${status.toUpperCase()}</span> <button data-id="${tx.id}" class="btn small edit">Edit</button> <button data-id="${tx.id}" class="btn small del">Del</button></div></div>`;
+    refs.txList.appendChild(div);
+  });
+
+  // attach handlers
+  document.querySelectorAll('.tx-row .del').forEach(b=>b.onclick=(e)=>{const id=e.target.dataset.id; if(!confirm('Delete?')) return; const arr=loadTx().filter(t=>t.id!==id); saveTx(arr); buildTxPanel(bank);});
+  document.querySelectorAll('.tx-row .edit').forEach(b=>b.onclick=(e)=>{const id=e.target.dataset.id; const tx=loadTx().find(t=>t.id===id); if(!tx) return; refs.txCard.value=tx.bankId; refs.txDate.value=tx.date; refs.txAmount.value=tx.amount; refs.txDesc.value=tx.desc; refs.txMethod.value=tx.methodOverride||''; const rest=loadTx().filter(t=>t.id!==id); saveTx(rest); buildTxPanel(bank);});
+
+  // totals & intersection rate
+  document.getElementById('sumPrincipal')?.remove?.();
+  const totals=document.createElement('div'); totals.style.marginTop='8px'; totals.innerHTML=`<div class="small">Outstanding principal: <strong>${toEGP(sumP)}</strong></div><div class="small">Accrued interest: <strong>${toEGP(sumI)}</strong></div><div class="small">Active / Near / Overdue: <strong>${counts.active} / ${counts.near} / ${counts.over}</strong></div><div class="small">Intersection rate: <strong>${txs.length?((counts.over/txs.length*100).toFixed(1))+'%':''}</strong></div>`;
+  refs.txList.appendChild(totals);
+
+  // build charts
+  buildCharts(bank,txs);
+}
+
+// charts build
+function buildCharts(bank, transactions){
+  const due = parseDate(bank.due);
+  // points = transactions by date; show grace and interest if overdue
+  const labels = transactions.map(t=>fmt(parseDate(t.date)));
+  const graceData = transactions.map(t=>daysDiff(parseDate(t.date),due));
+  const amounts = transactions.map(t=>t.amount);
+  // interest for overdue relative to today
+  const today=new Date();
+  const interestData = transactions.map(t=>{const over = Math.max(0, daysDiff(due,today)); const method=t.methodOverride||bank.method; return over>0 ? (method==='compound'?compoundInterest(t.amount,bank.rate,over):simpleInterest(t.amount,bank.rate,over)) : 0});
+
+  // destroy old
+  if(trendChart) trendChart.destroy();
+  const ctx=document.getElementById('trendChart').getContext('2d');
+  trendChart = new Chart(ctx,{type:'line',data:{labels, datasets:[{label:'Grace (days)',data:graceData,borderColor: theme==='dark'?'#00a3ff':'#005BAC',backgroundColor: theme==='dark'?'rgba(0,163,255,0.12)':'rgba(0,90,180,0.08)',fill:true,tension:0.3,pointRadius:6},{label:'Amount (EGP)',data:amounts,type:'bar',yAxisID:'y1',backgroundColor:'rgba(34,197,94,0.6)'}]}, options:{responsive:true,interaction:{mode:'index',intersect:false},scales:{y:{title:{display:true,text:'Grace days'}},y1:{position:'right',grid:{display:false},title:{display:true,text:'Amount (EGP)'}}}, plugins:{tooltip:{callbacks:{label:function(ctx){const i=ctx.dataIndex; const t=transactions[i]; if(!t) return ''; const p=fmt(parseDate(t.date)); const g=daysDiff(parseDate(t.date),due); const dueS=fmt(due); const over=Math.max(0,daysDiff(due,today)); const method=t.methodOverride||bank.method; const interest= over>0 ? (method==='compound'?compoundInterest(t.amount,bank.rate,over):simpleInterest(t.amount,bank.rate,over)) : 0; return [`Purchase: ${p}`,`Due: ${dueS}`,`Grace: ${g} days`,`Interest(if overdue): ${toEGP(interest)}`];}}}}}});
+
+  // week chart (this week's grace)
+  if(weekChart) weekChart.destroy();
+  const weekCtx=document.getElementById('weekChart').getContext('2d');
+  const today2=new Date(); const startWeek=new Date(today2); startWeek.setDate(today2.getDate()-today2.getDay()); startWeek.setHours(0,0,0,0);
+  const weekLabels=[]; const weekVals=[];
+
+  for(let d=new Date(startWeek); d<=new Date(startWeek.getTime()+6*24*3600*1000); d.setDate(d.getDate()+1)){
+    weekLabels.push(fmt(d)); weekVals.push(daysDiff(d,due));
+  }
+  weekChart = new Chart(weekCtx,{type:'bar',data:{labels:weekLabels,datasets:[{label:"This week's grace",data:weekVals,backgroundColor:'#F37021'}]},options:{responsive:true,plugins:{legend:{display:false}}}});
+}
+
+// initial load
+applyTheme();
+document.addEventListener('DOMContentLoaded',()=>{applyTheme(); renderBanks(); const banks=loadBanks(); if(banks.length){selectBank(banks[0].id); refs.txCard.value=banks[0].id;} });
+
+</script>
+</body>
+</html>
