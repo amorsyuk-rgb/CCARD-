@@ -1,6 +1,6 @@
 {
-  "name": "gracewise-dashboard-v5-full",
-  "version": "5.0.1",
+  "name": "gracewise-dashboard-v5-safe",
+  "version": "5.0.2",
   "type": "module",
   "main": "server.js",
   "scripts": {
