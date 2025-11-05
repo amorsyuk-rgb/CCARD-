@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 10000;
 app.use(express.static(__dirname));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "gracewise.html"));
+  res.sendFile(path.join(__dirname, "gracewise_v4.html"));
 });
 
-app.listen(PORT, () => console.log(`✅ GraceWise running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ GraceWise v4 running on port ${PORT}`));
