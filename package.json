@@ -1,11 +1,10 @@
 {
-  "name": "gracewise-dashboard-v5-full",
-  "version": "5.0.1",
+  "name": "gracewise-dashboard-v5-1-stable",
+  "version": "5.1.0",
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.19.2"
