@@ -1,0 +1,24 @@
+:root{--cib-blue:#005BAC;--cib-orange:#F37021;--okx-bg:#0b0f14;--okx-text:#e6eef3;--muted:#6b7280;--danger:#ff6b6b}
+*{box-sizing:border-box}body{font-family:Inter,Arial,sans-serif;margin:0;background:#f6f8fa;color:#111}
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px;background:linear-gradient(90deg,var(--cib-blue),var(--cib-orange));color:white}
+.logo{font-weight:800;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.06)}
+.container{max-width:1100px;margin:12px auto;padding:12px}
+.panel{background:white;border-radius:8px;padding:12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(10,20,30,0.04)}
+.dark body{background:var(--okx-bg);color:var(--okx-text)}.dark .panel{background:#0f1419;color:var(--okx-text);box-shadow:none}
+label{display:block;margin-top:8px;color:var(--muted);font-size:13px}
+input,select,button,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ee;background:white}
+.dark input,.dark select{background:#0b0f14;border:1px solid rgba(255,255,255,0.06);color:var(--okx-text)}
+.small{font-size:13px;color:var(--muted)}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;height:64px;display:flex;justify-content:space-around;align-items:center;background:#fff;border-top:1px solid #e6e9ee}
+.bottom-nav .nav-item{flex:1;text-align:center;padding:8px;cursor:pointer;color:var(--muted)}
+.bottom-nav .nav-item.active{color:var(--cib-blue);font-weight:700}
+.tx-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;border:1px solid #eef2f5;margin-top:8px;background:transparent}
+.tx-row.overdue{background:linear-gradient(90deg,#fff2f0,#fff8f7)}
+.icon-btn{border:0;background:transparent;cursor:pointer;padding:6px}
+.actions{display:flex;gap:8px}
+.hidden{display:none}
+.progress{height:12px;background:#e6e6e6;border-radius:8px;overflow:hidden;margin-top:8px}
+.progress-bar{height:100%;width:0%;transition:width .3s ease;border-radius:8px}
+.chart{width:100%;height:140px}
+.modal{position:fixed;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4)}
+.modal .panel{width:90%;max-width:420px}
