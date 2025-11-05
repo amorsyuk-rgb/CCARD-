@@ -1,0 +1,13 @@
+{
+  "name": "gracewise-dashboard-v4",
+  "version": "4.0.0",
+  "type": "module",
+  "description": "GraceWise \u2014 Smart Credit Dashboard v4 (EGP)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
