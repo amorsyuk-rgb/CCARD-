@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 10000;
 app.use(express.static(__dirname));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "smart_grace_full.html"));
+  res.sendFile(path.join(__dirname, "smart_grace_v2.html"));
 });
 
-app.listen(PORT, () => console.log(`✅ Smart Grace running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Smart Grace V2 running on port ${PORT}`));
