@@ -1,6 +1,6 @@
 {
-  "name": "gracewise-dashboard-v5-2-lite",
-  "version": "5.2.0",
+  "name": "gracewise-dashboard-v5-3-pro",
+  "version": "5.3.0",
   "type": "module",
   "main": "server.js",
   "scripts": {
