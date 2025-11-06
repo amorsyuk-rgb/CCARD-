@@ -49,7 +49,7 @@ app.post('/api/register', async (req, res) => {
   db.data.users.push(user);
   await db.write();
 
-  const token = createToken({ sub: user.id });
+const token = createToken({ sub:user.id, userId:user.userId });
   res.json({ token, user: { id: user.id, username: user.username, userId: user.userId } });
 });
 
