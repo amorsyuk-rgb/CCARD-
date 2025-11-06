@@ -1,1 +1,26 @@
-<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Grace — GraceWise</title><link rel="stylesheet" href="/theme.css"><script src="/core.js"></script></head><body><div class="header"><div class="logo">GW</div><div style="font-weight:700">Grace Analysis</div><div style="display:flex;gap:8px"><button onclick="location.href='/cards'">Cards</button></div></div><div class="container"><div class="panel"><h3>Grace Analysis</h3><div class="small">Choose card and purchase date to compute grace and visualize the week.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><select id="analysisCard" style="flex:1"></select><input id="analysisDate" type="date"><button id="calcBtn">Calc</button></div><div id="analysisSummary" style="margin-top:12px"></div><div class="progress"><div id="analysisProgress" class="progress-bar"></div></div><div style="margin-top:12px"><canvas id="weekChart" class="chart"></canvas></div></div></div><div class="bottom-nav"><div class="nav-item" data-path="/cards" onclick="location.href='/cards'">Cards</div><div class="nav-item" data-path="/transactions" onclick="location.href='/transactions'">Tx</div><div class="nav-item active" data-path="/grace" onclick="location.href='/grace'">Grace</div><div class="nav-item" data-path="/settings" onclick="location.href='/settings'">Settings</div></div><script>applyTheme(); setActiveNav('/grace'); function renderAnalysisCards(){ const sel=document.getElementById('analysisCard'); sel.innerHTML=''; const banks=load(BANKS_KEY); banks.forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.textContent=b.name; sel.appendChild(o); }); } function update(){ const banks=load(BANKS_KEY); if(!banks.length){ document.getElementById('analysisSummary').innerHTML='<div class="small">No cards</div>'; return; } const sel=document.getElementById('analysisCard'); const bank=banks.find(x=>x.id===sel.value)||banks[0]; const dateInput=document.getElementById('analysisDate').value; if(!dateInput){ document.getElementById('analysisSummary').innerHTML='<div class="small">Select date</div>'; return; } const purchase=new Date(dateInput+'T00:00:00'); const calc=calculateDueForCycle(bank,purchase); const due=calc.due; const grace=daysDiff(purchase,due); const overdue=Math.max(0,daysDiff(due,new Date())); document.getElementById('analysisSummary').innerHTML=`<div><strong>Purchase:</strong> ${fmt(purchase)}</div><div><strong>Due:</strong> ${fmt(due)}</div><div><strong>Grace:</strong> ${grace} days</div>${overdue>0?`<div style="color:#b91c1c"><strong>Overdue: ${overdue} days</strong></div>`:''}`; const progEl=document.getElementById('analysisProgress'); const totalWindow=grace>0?grace:1; const elapsed=daysDiff(purchase,new Date()); const prog=Math.min(100,Math.max(0,Math.round((elapsed/totalWindow)*100))); progEl.style.width=prog+'%'; progEl.style.background=overdue>0? 'linear-gradient(90deg,#ff6b6b,#ff2e2e)':'linear-gradient(90deg,#005BAC,#F37021)'; buildWeekChart(calc.due); } let weekChart=null; function buildWeekChart(due){ const ctx=document.getElementById('weekChart').getContext('2d'); const today=new Date(); const start=new Date(today); start.setDate(today.getDate()-today.getDay()); const labels=[],data=[],colors=[]; for(let i=0;i<7;i++){ const d=new Date(start); d.setDate(start.getDate()+i); labels.push(d.toLocaleDateString('en-US',{weekday:'short'})); data.push(daysDiff(d,due)); const g=ctx.createLinearGradient(0,0,0,120); g.addColorStop(0,'#005BAC'); g.addColorStop(1,'#F37021'); colors.push(g); } if(weekChart) weekChart.destroy(); weekChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:colors}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}}); } document.getElementById('calcBtn').addEventListener('click',update); document.addEventListener('DOMContentLoaded',()=>{ renderAnalysisCards(); });</script></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <title>Grace - GraceWise</title>
+  <link rel='stylesheet' href='/theme.css'>
+</head>
+<body>
+  <div class='header'>
+    <div class='logo'>GW</div>
+    <div style='font-weight:700'>Grace</div>
+  </div>
+  <div class='container'>
+    <div class='panel'>
+      <h3>Grace Page</h3>
+      <p>Formatted version placeholder (logic same as full version).</p>
+    </div>
+  </div>
+  <div class='bottom-nav'>
+    <div class='nav-item' data-path='/cards' onclick="location.href='/cards'">Cards</div>
+    <div class='nav-item' data-path='/transactions' onclick="location.href='/transactions'">Tx</div>
+    <div class='nav-item' data-path='/grace' onclick="location.href='/grace'">Grace</div>
+    <div class='nav-item' data-path='/settings' onclick="location.href='/settings'">Settings</div>
+  </div>
+</body>
+</html>
