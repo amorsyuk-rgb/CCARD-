@@ -11,4 +11,4 @@ app.get('/transactions', (req,res)=>res.sendFile(path.join(__dirname,'public','t
 app.get('/grace', (req,res)=>res.sendFile(path.join(__dirname,'public','grace.html')));
 app.get('/settings', (req,res)=>res.sendFile(path.join(__dirname,'public','settings.html')));
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()=>console.log(`GraceWise v5.5 Pro serving on port ${PORT}`));
+app.listen(PORT, ()=>console.log(`GraceWise v5.5 Pro (Formatted) running on port ${PORT}`));
