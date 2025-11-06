@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "lowdb": "^3.0.0",
+    "lowdb": "3.0.0",
     "bcrypt": "^5.1.0",
     "jsonwebtoken": "^9.0.0",
     "nanoid": "^4.0.0"
