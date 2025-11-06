@@ -1,12 +1,16 @@
 {
-  "name": "gracewise-v5-6-full-formatted",
-  "version": "5.6.0",
+  "name": "gracewise-v5-7-hybrid",
+  "version": "5.7.0",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "lowdb": "^3.0.0",
+    "bcrypt": "^5.1.0",
+    "jsonwebtoken": "^9.0.0",
+    "nanoid": "^4.0.0"
   }
 }

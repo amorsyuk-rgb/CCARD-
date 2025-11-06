@@ -1,0 +1,1 @@
+GraceWise v5.7 Hybrid - deploy on Render. Set JWT_SECRET env var. Place face-api models in public/models/ if using face login.
