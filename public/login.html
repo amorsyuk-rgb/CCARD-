@@ -1,1 +1,36 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Login — GraceWise</title><link rel="stylesheet" href="/theme.css"><script src="/core.js"></script></head><body><div class="header"><div style="display:flex;gap:12px;align-items:center"><div class="logo">GW</div><div><div style="font-weight:700;font-size:18px">GraceWise</div><div class="small">Sign in</div></div></div></div><div class="container"><div class="panel"><h3>Login</h3><label>Email or Username<input id="loginIdentifier" placeholder="email@example.com or username"></label><label>Password<input id="loginPass" type="password"></label><div style="display:flex;gap:8px;margin-top:10px"><button id="loginBtn">Login</button><button id="regBtn">Register</button></div><div style="margin-top:10px"><a href="/forgot">Forgot password?</a></div><div id="loginMsg" class="small"></div></div></div><script>document.getElementById('loginBtn').addEventListener('click', async ()=>{ const id = document.getElementById('loginIdentifier').value.trim(); const pass = document.getElementById('loginPass').value; const res = await loginCreds(id, pass); if(res.ok){ alert('Logged in'); location.href='/cards'; } else { alert('Login failed: '+(res.error||'Unknown')); } }); document.getElementById('regBtn').addEventListener('click', async ()=>{ const id = document.getElementById('loginIdentifier').value.trim(); const pass = document.getElementById('loginPass').value; if(!id) return alert('Enter email or username and password'); if(!pass) return alert('Enter password'); if(!id.includes('@')){ const email = prompt('Enter your email:'); if(!email) return alert('Email required for registration'); const res = await registerUser(id, email, pass); if(res.ok){ alert('Registered & logged in'); location.href='/cards'; } else alert('Register failed: '+(res.error||'Unknown')); } else { const username = prompt('Choose a username:'); if(!username) return alert('Username required for registration'); const res = await registerUser(username, id, pass); if(res.ok){ alert('Registered & logged in'); location.href='/cards'; } else alert('Register failed: '+(res.error||'Unknown')); } });</script></body></html>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Login — GraceWise</title><link rel="stylesheet" href="/theme.css"><script src="/core.js"></script></head><body>
+<div class="header"><div style="display:flex;gap:12px;align-items:center"><div class="logo">GW</div><div><div style="font-weight:700;font-size:18px">GraceWise</div><div class="small">Sign in</div></div></div></div>
+<div class="container"><div class="panel"><h3>Login</h3>
+<label>Email or Username<input id="loginIdentifier" placeholder="email@example.com or username"></label>
+<label>Password<input id="loginPass" type="password"></label>
+<div style="display:flex;gap:8px;margin-top:10px"><button id="loginBtn">Login</button><button id="regBtn">Register</button></div>
+<div style="margin-top:10px"><a href="/forgot">Forgot password?</a></div>
+<div id="loginMsg" class="small"></div>
+</div></div>
+<script>
+document.getElementById('loginBtn').addEventListener('click', async ()=>{
+  const id = document.getElementById('loginIdentifier').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const res = await loginCreds(id, pass);
+  if(res.ok){ alert('Logged in'); location.href='/cards'; } else { alert('Login failed: '+(res.error||'Unknown')); }
+});
+
+document.getElementById('regBtn').addEventListener('click', async ()=>{
+  const id = document.getElementById('loginIdentifier').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(!id || !pass) return alert('Enter email/username and password');
+  if(!id.includes('@')){
+    const email = prompt('Enter your email:');
+    if(!email) return alert('Email required');
+    const res = await registerUser(id, email, pass);
+    if(res.ok){ alert('Registered & logged in'); location.href='/cards'; } else alert('Register failed: '+(res.error||'Unknown'));
+  } else {
+    const username = prompt('Choose a username:');
+    if(!username) return alert('Username required');
+    const res = await registerUser(username, id, pass);
+    if(res.ok){ alert('Registered & logged in'); location.href='/cards'; } else alert('Register failed: '+(res.error||'Unknown'));
+  }
+});
+</script>
+</body></html>
