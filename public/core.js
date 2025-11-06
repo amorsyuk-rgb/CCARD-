@@ -8,10 +8,12 @@ function currentUserId() {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return 'guest';
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.sub || 'guest';
-  } catch (e) { return 'guest'; }
+    // Prefer userId (like “GW001”), fallback to sub
+    return payload.userId || payload.sub || 'guest';
+  } catch (e) {
+    return 'guest';
+  }
 }
-
 function keyFor(base) {
   return `gw_${base}_${currentUserId()}`;
 }
