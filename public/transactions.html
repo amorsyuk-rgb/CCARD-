@@ -1,1 +1,131 @@
-<!doctype html><html><body>Transactions placeholder</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Transactions — GraceWise</title>
+  <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@1.39.1/tabler-icons.min.css">
+  <script src="/core.js"></script>
+</head>
+<body>
+  <div class="header">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="logo">GW</div>
+      <div>
+        <div style="font-weight:700;font-size:18px">GraceWise</div>
+        <div class="small">Transactions</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="location.href='/cards'">Cards</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="panel">
+      <h3>Add Transaction</h3>
+      <div class="small">Select a card, date, and amount. The app calculates overdue interest automatically.</div>
+      <label>Card<select id="txCard"></select></label>
+      <label>Date<input id="txDate" type="date"></label>
+      <label>Amount (EGP)<input id="txAmount" type="number" step="0.01"></label>
+      <label>Description<input id="txDesc" type="text" placeholder="e.g. supermarket"></label>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button id="addBtn">Add Transaction</button>
+        <button id="clearBtn">Clear</button>
+      </div>
+    </div>
+
+    <div id="txPanel" class="panel">
+      <h3>Transactions</h3>
+      <div id="txList" class="small">No transactions.</div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item" data-path="/cards" onclick="location.href='/cards'"><span class="icon ti ti-credit-card"></span>Cards</div>
+    <div class="nav-item active" data-path="/transactions" onclick="location.href='/transactions'"><span class="icon ti ti-wallet"></span>Transactions</div>
+    <div class="nav-item" data-path="/grace" onclick="location.href='/grace'"><span class="icon ti ti-chart-bar"></span>Grace</div>
+    <div class="nav-item" data-path="/settings" onclick="location.href='/settings'"><span class="icon ti ti-settings"></span>Settings</div>
+  </div>
+
+<script>
+applyTheme();
+setActiveNav('/transactions');
+
+function renderTxCards(){
+  const sel = document.getElementById('txCard');
+  sel.innerHTML = '';
+  load(BANKS_KEY).forEach(b=>{
+    const o=document.createElement('option');
+    o.value=b.id; o.textContent=b.name;
+    sel.appendChild(o);
+  });
+}
+
+function renderTxList(){
+  const txs = load(TX_KEY);
+  const banks = load(BANKS_KEY);
+  const el = document.getElementById('txList');
+  el.innerHTML = '';
+
+  if(!txs.length){
+    el.innerHTML = '<div class="small">No transactions yet.</div>';
+    return;
+  }
+
+  const today = new Date();
+  txs.forEach(t=>{
+    const b = banks.find(x=>x.id===t.bankId);
+    if(!b) return;
+    const purchase = parseDate(t.date);
+    const due = parseDate(b.due);
+    const grace = daysDiff(purchase, due);
+    const overdue = Math.max(0, daysDiff(due, today));
+    const interest = overdue > 0 ? simpleInterest(t.amount, b.daily, overdue) : 0;
+    const fine = overdue > 0 ? b.fine : 0;
+    const total = t.amount + interest + fine;
+
+    const div = document.createElement('div');
+    div.className = 'tx-row' + (overdue > 0 ? ' overdue' : '');
+    div.innerHTML = `
+      <div>
+        <strong>${t.desc || 'Purchase'}</strong>
+        <div class="small">${fmt(purchase)} • Due ${fmt(due)} • Grace ${grace}d</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700">${toEGP(t.amount)}</div>
+        <div class="small">Overdue: ${overdue}d</div>
+        <div class="small">Interest: ${toEGP(interest)}</div>
+        <div class="small">Fine: ${toEGP(fine)}</div>
+        <div style="margin-top:6px;font-weight:700">${toEGP(total)}</div>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+document.getElementById('addBtn').addEventListener('click', ()=>{
+  const bankId = document.getElementById('txCard').value;
+  const date = document.getElementById('txDate').value;
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const desc = document.getElementById('txDesc').value.trim();
+  if(!bankId || !date || isNaN(amount)){
+    alert('Please fill all fields.');
+    return;
+  }
+  const txs = load(TX_KEY);
+  txs.push({id:uid(), bankId, date, amount, desc});
+  save(TX_KEY, txs);
+  renderTxList();
+  document.getElementById('txDate').value='';
+  document.getElementById('txAmount').value='';
+  document.getElementById('txDesc').value='';
+});
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderTxCards();
+  renderTxList();
+});
+</script>
+</body>
+</html>

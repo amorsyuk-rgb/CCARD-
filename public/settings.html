@@ -1,1 +1,77 @@
-<!doctype html><html><body>Settings placeholder</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Settings — GraceWise</title>
+  <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@1.39.1/tabler-icons.min.css">
+  <script src="/core.js"></script>
+</head>
+<body>
+  <div class="header">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="logo">GW</div>
+      <div><div style="font-weight:700;font-size:18px">GraceWise</div><div class="small">Settings</div></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="panel">
+      <h3>Settings</h3>
+      <div class="small">Backup, restore, and theme customization.</div>
+
+      <label>Theme
+        <select id="themeSelect">
+          <option value="cib">CIB (Light)</option>
+          <option value="dark">OKX (Dark)</option>
+        </select>
+      </label>
+
+      <div style="margin-top:10px">
+        <button id="syncBtn">Backup to Cloud</button>
+        <button id="restoreBtn">Restore from Cloud</button>
+      </div>
+
+      <div style="margin-top:10px">
+        <button id="logoutBtn">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item" data-path="/cards" onclick="location.href='/cards'"><span class="icon ti ti-credit-card"></span>Cards</div>
+    <div class="nav-item" data-path="/transactions" onclick="location.href='/transactions'"><span class="icon ti ti-wallet"></span>Transactions</div>
+    <div class="nav-item" data-path="/grace" onclick="location.href='/grace'"><span class="icon ti ti-chart-bar"></span>Grace</div>
+    <div class="nav-item active" data-path="/settings" onclick="location.href='/settings'"><span class="icon ti ti-settings"></span>Settings</div>
+  </div>
+
+<script>
+applyTheme();
+setActiveNav('/settings');
+
+document.getElementById('themeSelect').value = getVal(THEME_KEY) || 'cib';
+document.getElementById('themeSelect').addEventListener('change', e=>{
+  setVal(THEME_KEY, e.target.value);
+  applyTheme();
+});
+
+document.getElementById('syncBtn').addEventListener('click', async ()=>{
+  const r = await syncToServer();
+  alert(r.ok ? 'Backup saved at '+r.timestamp : 'Backup failed');
+});
+
+document.getElementById('restoreBtn').addEventListener('click', async ()=>{
+  const r = await restoreFromServer();
+  if(r.ok){ alert('Restored data at '+r.timestamp); location.reload(); }
+  else alert('Restore failed');
+});
+
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  clearToken();
+  alert('Logged out');
+  location.href='/login';
+});
+</script>
+</body>
+</html>
