@@ -1,6 +1,6 @@
 {
-  "name": "gracewise-v5-8-secure",
-  "version": "5.8.0",
+  "name": "gracewise-v5-8-full",
+  "version": "5.8.1",
   "type": "module",
   "main": "server.js",
   "scripts": {
