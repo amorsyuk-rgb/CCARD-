@@ -13,14 +13,12 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// LowDB
 const dbFile = path.join(__dirname, 'data', 'db.json');
 const adapter = new JSONFile(dbFile);
 const db = new Low(adapter);
 async function initDB(){ await db.read(); db.data ||= { users: [], backups: [] }; await db.write(); }
 await initDB();
 
-// JWT helpers
 const JWT_SECRET = process.env.JWT_SECRET || 'change_me_secure';
 function createToken(payload){ return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' }); }
 function verifyToken(token){ try{ return jwt.verify(token, JWT_SECRET); }catch(e){ return null; } }
@@ -96,7 +94,6 @@ app.post('/api/sync', async (req,res)=>{
   const timestamp = new Date().toISOString();
   db.data.backups ||= [];
   db.data.backups.push({ id: nanoid(), ownerId: payload.sub, timestamp, banks: banks||[], transactions: transactions||[] });
-  // keep last 10 backups for safety
   const ours = db.data.backups.filter(b=>b.ownerId===payload.sub).sort((a,b)=>b.timestamp.localeCompare(a.timestamp));
   const keep = ours.slice(0,10);
   db.data.backups = db.data.backups.filter(b=>b.ownerId!==payload.sub).concat(keep);
@@ -115,10 +112,8 @@ app.get('/api/restore', async (req,res)=>{
   res.json({ banks: latest.banks||[], transactions: latest.transactions||[], timestamp: latest.timestamp });
 });
 
-// debug users list
 app.get('/api/users', async (req,res)=>{ await db.read(); res.json(db.data.users.map(u=>({ id:u.id, username:u.username, email:u.email }))); });
 
-// serve pages
 const pages = ['login','cards','transactions','grace','settings','forgot'];
 pages.forEach(page=>{
   app.get(`/${page}`, (req,res)=> res.sendFile(path.join(__dirname,'public',`${page}.html`)));
@@ -127,4 +122,4 @@ pages.forEach(page=>{
 app.get('*', (req,res)=> res.redirect('/login'));
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()=> console.log(`GraceWise v5.8 full functional running on port ${PORT}`));
+app.listen(PORT, ()=> console.log(`GraceWise v5.8.3 running on port ${PORT}`));

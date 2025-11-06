@@ -1,10 +1,5 @@
-GraceWise v5.8 Full Functional Fix
----------------------------------
-This package restores full Cards/Transactions/Grace/Settings pages and keeps the secure email-auth system.
-- server.js: register/login/forgot/reset + sync/restore (no Face endpoints)
-- public/: login, forgot, cards, transactions, grace, settings, core.js, theme.css
-- data/db.json initial
-Notes:
-- Auto-backup (syncToServer) is triggered automatically after login/register.
-- Settings page includes manual Backup, Restore, and Download Data File.
-- To deploy on Render: upload repo, set JWT_SECRET env var, and deploy. No shell required.
+GraceWise v5.8.3 Smart Validation Full Build
+- Persistent data folder: /data/db.json kept for Render persistence (Option 1)
+- Pages: login, forgot, cards, transactions, grace, settings
+- core.js includes validation, rate syncing, theme, sync/restore functions
+- Deploy: upload repo to Render, set JWT_SECRET env var, then deploy. Data persists in data/db.json

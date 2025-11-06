@@ -1,6 +1,6 @@
 {
-  "name": "gracewise-v5-8-full",
-  "version": "5.8.1",
+  "name": "gracewise-v5-8-3-smart",
+  "version": "5.8.3",
   "type": "module",
   "main": "server.js",
   "scripts": {
