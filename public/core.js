@@ -1,16 +1,28 @@
-// core.js v5.8 full functional - per-user storage + auto-sync on login + manual backup/download
+// GraceWise v5.8.2 Hybrid Sync Fix
 const TOKEN_KEY = 'gw_token_v56';
 
 function setToken(t){
-  // clear previous gw_ keys to avoid collisions
-  Object.keys(localStorage).forEach(k => { if(k.startsWith('gw_')) localStorage.removeItem(k); });
   localStorage.setItem(TOKEN_KEY, t);
 }
 
 function getToken(){ return localStorage.getItem(TOKEN_KEY); }
-function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
 
-function currentUserId(){ try{ const token = getToken(); if(!token) return 'guest'; const payload = JSON.parse(atob(token.split('.')[1])); return payload.email || payload.sub || 'guest'; }catch(e){ return 'guest'; } }
+function clearToken(){
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+function currentUserId(){
+  try{
+    const token = getToken();
+    if(!token) return localStorage.getItem("gw_last_user") || "guest";
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const id = payload.email || payload.sub || "guest";
+    localStorage.setItem("gw_last_user", id);
+    return id;
+  }catch(e){
+    return localStorage.getItem("gw_last_user") || "guest";
+  }
+}
 
 function keyFor(base){ return `gw_${base}_${currentUserId()}`; }
 function BANKS_KEY(){ return keyFor('banks'); }
@@ -19,7 +31,7 @@ function THEME_KEY(){ return keyFor('theme'); }
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function load(k){ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; } }
-function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); setTimeout(()=>syncToServer(),1500); }
 function setVal(k,v){ localStorage.setItem(k,v); }
 function getVal(k){ return localStorage.getItem(k); }
 function fmt(d){ return d? new Date(d).toLocaleDateString() : '-'; }
@@ -28,55 +40,59 @@ function daysDiff(a,b){ return Math.round((b-a)/(1000*60*60*24)); }
 function toEGP(n){ return 'EGP '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function simpleInterest(amount,daily,days){ return amount*(daily/100)*days; }
 
-function applyTheme(){ let theme = localStorage.getItem(THEME_KEY()) || 'cib'; if(theme==='dark'){ document.documentElement.classList.add('dark'); document.body.classList.add('dark'); } else { document.documentElement.classList.remove('dark'); document.body.classList.remove('dark'); } localStorage.setItem(THEME_KEY(), theme); }
+function applyTheme(){
+  let theme = localStorage.getItem(THEME_KEY()) || 'cib';
+  if(theme==='dark'){
+    document.documentElement.classList.add('dark');
+    document.body.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+  }
+  localStorage.setItem(THEME_KEY(), theme);
+}
+
 function setActiveNav(path){ document.querySelectorAll('.bottom-nav .nav-item').forEach(i=> i.classList.toggle('active', i.dataset.path===path)); }
 
-// Auth + sync helpers
 async function registerUser(username,email,password){
-  try{
-    const res = await fetch('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, email, password }) });
-    if(!res.ok) return { ok:false, error: await res.text() };
-    const data = await res.json(); setToken(data.token); // auto backup after login/register
-    await syncToServer(); return { ok:true, user: data.user };
-  }catch(e){ return { ok:false, error: String(e) }; }
+  const res = await fetch('/api/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username,email,password }) });
+  const data = await res.json(); if(res.ok){ setToken(data.token); await restoreFromServer(); await syncToServer(); return { ok:true, user:data.user }; }
+  return { ok:false, error:data.error };
 }
 
 async function loginCreds(emailOrUser, password){
-  try{
-    const isEmail = emailOrUser.includes('@');
-    const body = isEmail ? { email: emailOrUser, password } : { username: emailOrUser, password };
-    const res = await fetch('/api/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    if(!res.ok) return { ok:false, error: await res.text() };
-    const data = await res.json(); setToken(data.token); // auto backup after login
-    await syncToServer(); return { ok:true, user: data.user };
-  }catch(e){ return { ok:false, error: String(e) }; }
+  const isEmail = emailOrUser.includes('@');
+  const body = isEmail ? { email: emailOrUser, password } : { username: emailOrUser, password };
+  const res = await fetch('/api/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const data = await res.json();
+  if(res.ok){ setToken(data.token); await restoreFromServer(); await syncToServer(); return { ok:true, user:data.user }; }
+  return { ok:false, error:data.error };
 }
 
-async function forgotPassword(email){
-  try{ const res = await fetch('/api/forgot',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); const data = await res.json(); return data; }catch(e){ return { ok:false, error: String(e) }; }
-}
-
-async function resetPassword(email, code, newPassword){
-  try{ const res = await fetch('/api/reset',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, code, newPassword }) }); const data = await res.json(); return data; }catch(e){ return { ok:false, error: String(e) }; }
-}
+async function forgotPassword(email){ const res = await fetch('/api/forgot',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) }); return await res.json(); }
+async function resetPassword(email,code,newPassword){ const res = await fetch('/api/reset',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email,code,newPassword }) }); return await res.json(); }
 
 async function syncToServer(){
-  const token = getToken(); if(!token) return { ok:false, error:'Not logged in' };
-  try{ const res = await fetch('/api/sync',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify({ banks: load(BANKS_KEY()), transactions: load(TX_KEY()) }) }); return await res.json(); }catch(e){ return { ok:false, error: String(e) }; }
+  const token = getToken(); if(!token) return;
+  const banks = load(BANKS_KEY()); const txs = load(TX_KEY());
+  try{ await fetch('/api/sync',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body: JSON.stringify({ banks, transactions: txs }) }); }catch(e){ console.warn('Sync error',e); }
 }
 
 async function restoreFromServer(){
-  const token = getToken(); if(!token) return { ok:false, error:'Not logged in' };
-  try{ const res = await fetch('/api/restore',{ headers:{ 'Authorization':'Bearer '+token } }); if(!res.ok) return { ok:false, error:'Restore failed' }; const data = await res.json(); if(data.banks) save(BANKS_KEY(), data.banks); if(data.transactions) save(TX_KEY(), data.transactions); return { ok:true, timestamp: data.timestamp }; }catch(e){ return { ok:false, error: String(e) }; }
+  const token = getToken(); if(!token) return;
+  try{
+    const res = await fetch('/api/restore',{ headers:{'Authorization':'Bearer '+token} });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data.banks && data.banks.length) save(BANKS_KEY(), data.banks);
+    if(data.transactions && data.transactions.length) save(TX_KEY(), data.transactions);
+  }catch(e){ console.warn('Restore error',e); }
 }
 
-// download current user data as JSON file
 function downloadDataFile(){
-  const banks = load(BANKS_KEY());
-  const tx = load(TX_KEY());
-  const payload = { banks, transactions: tx, exportedAt: new Date().toISOString() };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const payload = { banks: load(BANKS_KEY()), transactions: load(TX_KEY()), exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `gracewise_export_${currentUserId()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  const a = document.createElement('a'); a.href=url; a.download=`gracewise_${currentUserId()}.json`; a.click();
+  URL.revokeObjectURL(url);
 }
