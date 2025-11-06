@@ -1,26 +1,144 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset='utf-8'>
-  <title>Cards - GraceWise</title>
-  <link rel='stylesheet' href='/theme.css'>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cards — GraceWise</title>
+  <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@1.39.1/tabler-icons.min.css">
+  <script src="/core.js"></script>
 </head>
 <body>
-  <div class='header'>
-    <div class='logo'>GW</div>
-    <div style='font-weight:700'>Cards</div>
-  </div>
-  <div class='container'>
-    <div class='panel'>
-      <h3>Cards Page</h3>
-      <p>Formatted version placeholder (logic same as full version).</p>
+  <div class="header">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="logo">GW</div>
+      <div>
+        <div style="font-weight:700;font-size:18px">GraceWise</div>
+        <div class="small">Cards & Banks</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button onclick="theme=theme==='cib'?'dark':'cib';applyTheme()">Toggle Theme</button>
+      <button onclick="exportData()">Export</button>
     </div>
   </div>
-  <div class='bottom-nav'>
-    <div class='nav-item' data-path='/cards' onclick="location.href='/cards'">Cards</div>
-    <div class='nav-item' data-path='/transactions' onclick="location.href='/transactions'">Tx</div>
-    <div class='nav-item' data-path='/grace' onclick="location.href='/grace'">Grace</div>
-    <div class='nav-item' data-path='/settings' onclick="location.href='/settings'">Settings</div>
+
+  <div class="container">
+    <div class="panel">
+      <h3>New / Edit Card</h3>
+      <div class="small">Enter billing cycle end day, due day, daily overdue rate (%) and fixed fine (EGP).</div>
+
+      <label>Card name
+        <input id="bankName" placeholder="e.g. CIB Titanium">
+      </label>
+
+      <label>Cycle End (date)
+        <input id="bankEnd" type="date">
+      </label>
+
+      <label>Payment Due (date)
+        <input id="bankDue" type="date">
+      </label>
+
+      <label>Annual Rate (%)
+        <input id="bankRate" type="number" step="0.01">
+      </label>
+
+      <label>Daily Overdue Rate (%)
+        <input id="bankDaily" type="number" step="0.0001" placeholder="e.g. 0.05">
+      </label>
+
+      <label>Late Fine (EGP)
+        <input id="bankFine" type="number" step="0.01" placeholder="e.g. 50">
+      </label>
+
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button id="saveBtn">Save Card</button>
+        <button id="newBtn">New</button>
+      </div>
+    </div>
+
+    <div id="banksPanel" class="panel">
+      <h3>Saved Cards</h3>
+      <div id="banksList" class="small">No cards yet.</div>
+    </div>
   </div>
+
+  <div class="bottom-nav" role="navigation">
+    <div class="nav-item active" data-path="/cards" onclick="location.href='/cards'"><span class="icon ti ti-credit-card"></span>Cards</div>
+    <div class="nav-item" data-path="/transactions" onclick="location.href='/transactions'"><span class="icon ti ti-wallet"></span>Transactions</div>
+    <div class="nav-item" data-path="/grace" onclick="location.href='/grace'"><span class="icon ti ti-chart-bar"></span>Grace</div>
+    <div class="nav-item" data-path="/settings" onclick="location.href='/settings'"><span class="icon ti ti-settings"></span>Settings</div>
+  </div>
+
+  <script>
+    applyTheme(); setActiveNav('/cards');
+    function renderBanks(){
+      const banks = load(BANKS_KEY);
+      const el = document.getElementById('banksList');
+      el.innerHTML = '';
+      if(!banks.length){ el.innerHTML = '<div class="small">No cards yet.</div>'; return; }
+      banks.forEach(b => {
+        const div = document.createElement('div');
+        div.className = 'bank-item';
+        div.innerHTML = `
+          <div>
+            <strong>${b.name}</strong>
+            <div class="small">Due ${new Date(b.due).toLocaleDateString()} • Daily ${b.daily}% • Fine ${toEGP(b.fine)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="openBank('${b.id}')">Open</button>
+            <button onclick="deleteBank('${b.id}')">Delete</button>
+          </div>
+        `;
+        el.appendChild(div);
+      });
+    }
+
+    function openBank(id){
+      const banks = load(BANKS_KEY);
+      const b = banks.find(x=>x.id===id);
+      if(!b) return;
+      document.getElementById('bankName').value = b.name;
+      document.getElementById('bankEnd').value = b.end;
+      document.getElementById('bankDue').value = b.due;
+      document.getElementById('bankRate').value = b.rate;
+      document.getElementById('bankDaily').value = b.daily;
+      document.getElementById('bankFine').value = b.fine;
+    }
+
+    function deleteBank(id){
+      if(!confirm('Delete card?')) return;
+      const banks = load(BANKS_KEY).filter(b=>b.id!==id);
+      save(BANKS_KEY,banks); renderBanks();
+    }
+
+    document.getElementById('saveBtn').addEventListener('click', ()=>{
+      const name = document.getElementById('bankName').value.trim();
+      const end = document.getElementById('bankEnd').value;
+      const due = document.getElementById('bankDue').value;
+      const rate = parseFloat(document.getElementById('bankRate').value)||0;
+      const daily = parseFloat(document.getElementById('bankDaily').value)||0;
+      const fine = parseFloat(document.getElementById('bankFine').value)||0;
+      if(!name||!end||!due){ alert('Please fill Name, Cycle End and Due date'); return; }
+      const banks = load(BANKS_KEY);
+      const existing = banks.find(x=>x.name.toLowerCase()===name.toLowerCase());
+      if(existing){
+        existing.end=end; existing.due=due; existing.rate=rate; existing.daily=daily; existing.fine=fine;
+      } else {
+        banks.push({ id:uid(), name, end, due, rate, daily, fine });
+      }
+      save(BANKS_KEY, banks);
+      renderBanks();
+      alert('Saved');
+    });
+
+    document.getElementById('newBtn').addEventListener('click', ()=>{
+      ['bankName','bankEnd','bankDue','bankRate','bankDaily','bankFine'].forEach(id=>document.getElementById(id).value='');
+    });
+
+    document.addEventListener('DOMContentLoaded', ()=>{ renderBanks(); });
+  </script>
+
 </body>
 </html>

@@ -1,26 +1,81 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset='utf-8'>
-  <title>Settings - GraceWise</title>
-  <link rel='stylesheet' href='/theme.css'>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Settings — GraceWise</title>
+  <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@1.39.1/tabler-icons.min.css">
+  <script src="/core.js"></script>
 </head>
 <body>
-  <div class='header'>
-    <div class='logo'>GW</div>
-    <div style='font-weight:700'>Settings</div>
-  </div>
-  <div class='container'>
-    <div class='panel'>
-      <h3>Settings Page</h3>
-      <p>Formatted version placeholder (logic same as full version).</p>
+  <div class="header">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="logo">GW</div>
+      <div>
+        <div style="font-weight:700;font-size:18px">GraceWise</div>
+        <div class="small">Settings</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="location.href='/cards'">Cards</button>
     </div>
   </div>
-  <div class='bottom-nav'>
-    <div class='nav-item' data-path='/cards' onclick="location.href='/cards'">Cards</div>
-    <div class='nav-item' data-path='/transactions' onclick="location.href='/transactions'">Tx</div>
-    <div class='nav-item' data-path='/grace' onclick="location.href='/grace'">Grace</div>
-    <div class='nav-item' data-path='/settings' onclick="location.href='/settings'">Settings</div>
+
+  <div class="container">
+    <div class="panel">
+      <h3>Settings</h3>
+      <div class="small">Theme toggle, import/export, and data reset.</div>
+
+      <label>Theme
+        <select id="themeSelect">
+          <option value="cib">CIB (Light)</option>
+          <option value="dark">OKX (Dark)</option>
+        </select>
+      </label>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="exportBtn">Export JSON</button>
+        <label class="small" style="cursor:pointer;padding:10px;border-radius:8px;border:1px solid #e8edf2;background:#fff">
+          Import JSON <input id="importFile" type="file" accept="application/json" style="display:none">
+        </label>
+      </div>
+
+      <div style="margin-top:12px">
+        <button id="clearAll">Clear All Data</button>
+        <button id="restoreDefaults">Restore Defaults</button>
+      </div>
+    </div>
   </div>
+
+  <div class="bottom-nav" role="navigation">
+    <div class="nav-item" data-path="/cards" onclick="location.href='/cards'"><span class="icon ti ti-credit-card"></span>Cards</div>
+    <div class="nav-item" data-path="/transactions" onclick="location.href='/transactions'"><span class="icon ti ti-wallet"></span>Transactions</div>
+    <div class="nav-item" data-path="/grace" onclick="location.href='/grace'"><span class="icon ti ti-chart-bar"></span>Grace</div>
+    <div class="nav-item active" data-path="/settings" onclick="location.href='/settings'"><span class="icon ti ti-settings"></span>Settings</div>
+  </div>
+
+  <script>
+    applyTheme(); setActiveNav('/settings');
+    document.getElementById('themeSelect').value = theme || 'cib';
+    document.getElementById('themeSelect').addEventListener('change', (e)=>{ theme = e.target.value; applyTheme(); });
+
+    document.getElementById('exportBtn').addEventListener('click', ()=> exportData());
+    document.getElementById('importFile').addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      importData(f, ()=> location.reload());
+    });
+
+    document.getElementById('clearAll').addEventListener('click', ()=>{
+      if(!confirm('Clear all data?')) return;
+      localStorage.removeItem(BANKS_KEY); localStorage.removeItem(TX_KEY); location.reload();
+    });
+
+    document.getElementById('restoreDefaults').addEventListener('click', ()=>{
+      if(!confirm('Restore defaults (clears data)?')) return;
+      localStorage.clear(); location.reload();
+    });
+  </script>
 </body>
 </html>
