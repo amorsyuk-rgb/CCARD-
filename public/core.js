@@ -29,7 +29,10 @@ function load(k){ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(
 function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
 function setVal(k,v){ localStorage.setItem(k,v); }
 function getVal(k){ return localStorage.getItem(k); }
-function setToken(t){ localStorage.setItem(TOKEN_KEY,t); }
+function setToken(t)
+{ localStorage.clear();
+  localStorage.setItem(TOKEN_KEY, t);
+}
 function getToken(){ return localStorage.getItem(TOKEN_KEY); }
 function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
 function fmt(d){ return d? new Date(d).toLocaleDateString() : '-'; }
