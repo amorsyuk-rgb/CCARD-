@@ -7,27 +7,40 @@
   <link rel="stylesheet" href="theme.css">
   <style>
     /* Inline adjustments to match theme */
-    .container{max-width:960px;margin:14px auto;padding:12px}
-    .panel{background:#fff;border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:0 8px 30px rgba(12,20,30,0.06)}
-    label{display:block;margin-top:10px;color:#374151;font-weight:600;font-size:13px}
-    input,select,textarea,button{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef6;background:#fff;font-size:14px}
-    .small{font-size:13px;color:#6b7280}
-    .row{display:flex;gap:10px}
-    .col{flex:1}
-    .tx-actions button{margin-right:8px}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:left;font-size:14px}
-    th{background:#f7fafc}
-    .status-badge{font-weight:700}
-    .progress-wrap{height:8px;background:rgba(0,0,0,0.06);border-radius:6px;overflow:hidden}
-    .progress{height:100%;transition:width .4s;background:linear-gradient(90deg,#005BAC,#F37021)}
-    .field-error{color:#b91c1c;font-size:12px;margin-top:6px}
-    .invalid{outline:2px solid rgba(185,28,28,0.08)}
-    .bottom-nav{position:fixed;left:0;right:0;bottom:0;height:64px;display:flex;align-items:center;justify-content:space-around;background:linear-gradient(90deg,#005BAC,#F37021);color:#fff}
-    .bottom-nav .nav-item{flex:1;text-align:center;color:#fff;font-weight:600;font-size:14px;padding:8px;cursor:pointer}
-    .tx-empty{color:#888;text-align:center;padding:12px}
-    @media(max-width:720px){ .row{flex-direction:column} .container{padding:10px} }
-  </style>
+  /* === Layout and Table Size Alignment Fix === */
+.container {
+  max-width: 100%;
+  padding: 12px 10px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.panel {
+  width: 100%;
+  max-width: 950px;
+  margin: 0 auto 14px;
+  padding: 14px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+th, td {
+  padding: 10px 8px;
+  word-wrap: break-word;
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  th, td { font-size: 12.5px; }
+  .panel { padding: 10px; }
+  .container { padding: 8px; }
+}  </style>
 </head>
 <body>
   <div class="header" style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:linear-gradient(90deg,#005BAC,#F37021);color:#fff">
