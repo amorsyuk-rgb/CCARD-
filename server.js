@@ -1,21 +1,39 @@
-// GraceWise v5.9 – Render-Ready Server.js
+// GraceWise v5.9 — Render-Safe Universal LowDB Server
+
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-// Safe universal import for LowDB (works on Render)
 import { Low } from "lowdb";
-let JSONFile;
-try {
-  // Try standard subpath
-  ({ JSONFile } = await import("lowdb/node"));
-} catch (err) {
-  // Fallback for Render environments
-  ({ JSONFile } = await import("lowdb/lib/node.js"));
-}
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
-// === Path setup ===
+// === Safe universal JSON adapter (works even if lowdb/node not exported) ===
+let JSONFileAdapter;
+try {
+  // Try official subpath (works locally and with correct export)
+  const lowdbNode = await import("lowdb/node");
+  JSONFileAdapter = lowdbNode.JSONFile;
+} catch {
+  // Fallback for Render or limited environments
+  console.warn("⚠️ lowdb/node not available — using custom JSON adapter.");
+  JSONFileAdapter = class {
+    constructor(filename) { this.filename = filename; }
+    async read() {
+      try {
+        const data = await fs.promises.readFile(this.filename, "utf-8");
+        return JSON.parse(data || "{}");
+      } catch {
+        return null;
+      }
+    }
+    async write(obj) {
+      await fs.promises.writeFile(this.filename, JSON.stringify(obj, null, 2));
+    }
+  };
+}
+
+// === Resolve absolute paths ===
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -28,22 +46,21 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// === LowDB setup ===
+// === LowDB Setup (users.json in root) ===
 const dbFile = path.join(__dirname, "users.json");
-const adapter = new JSONFile(dbFile);
+const adapter = new JSONFileAdapter(dbFile);
 const db = new Low(adapter, { users: [] });
-
 await db.read();
 db.data ||= { users: [] };
 
-// === Routes ===
+// === API ROUTES ===
 
 // Health check
 app.get("/api", (req, res) => {
   res.json({ status: "GraceWise API is running", version: "v5.9" });
 });
 
-// Get all users (for testing)
+// Get all users
 app.get("/api/users", async (req, res) => {
   await db.read();
   res.json(db.data.users || []);
@@ -67,9 +84,9 @@ app.post("/api/register", async (req, res) => {
   res.json({ success: true, id });
 });
 
-// Login route
+// Login existing user
 app.post("/api/login", async (req, res) => {
-  const { identifier, password } = req.body; // identifier = email OR username
+  const { identifier, password } = req.body; // identifier = username OR email
   if (!identifier || !password)
     return res.status(400).json({ error: "Missing login credentials" });
 
@@ -92,12 +109,12 @@ app.post("/api/login", async (req, res) => {
   });
 });
 
-// === Fallback to index.html for single-page routing ===
+// === SPA Fallback ===
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// === Start server ===
+// === Start Server ===
 app.listen(PORT, () => {
-  console.log(`GraceWise v5.9 backend running on port ${PORT}`);
+  console.log(`✅ GraceWise v5.9 backend running on port ${PORT}`);
 });
