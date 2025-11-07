@@ -2,8 +2,16 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+// Safe universal import for LowDB (works on Render)
 import { Low } from "lowdb";
-import { JSONFile } from "lowdb/node";
+let JSONFile;
+try {
+  // Try standard subpath
+  ({ JSONFile } = await import("lowdb/node"));
+} catch (err) {
+  // Fallback for Render environments
+  ({ JSONFile } = await import("lowdb/lib/node.js"));
+}
 import path from "path";
 import { fileURLToPath } from "url";
 
