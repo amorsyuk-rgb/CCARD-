@@ -1,1 +1,343 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Transactions — GraceWise</title><link rel="stylesheet" href="/theme.css"><script src="/core.js"></script></head><body><div class="header"><div style="display:flex;gap:12px;align-items:center"><div class="logo">GW</div><div><div style="font-weight:700;font-size:18px">GraceWise</div><div class="small">Transactions</div></div></div><div style="display:flex;gap:8px;align-items:center"><button onclick="location.href='/cards'">Cards</button></div></div><div class="container"><div class="panel"><h3>Add Transaction</h3><div class="small">Select a card, date, and amount. The app validates input and calculates overdue interest automatically.</div><label>Card<select id="txCard"></select></label><label>Date<input id="txDate" type="date"></label><label>Amount (EGP)<input id="txAmount" type="number" step="0.01" min="0.01"></label><label>Description<input id="txDesc" type="text" placeholder="e.g. supermarket"></label><div style="display:flex;gap:10px;margin-top:12px"><button id="addBtn">Add Transaction</button><button id="clearBtn">Clear</button></div></div><div id="txPanel" class="panel"><h3>Transactions</h3><div id="txList" class="small">No transactions.</div></div></div><div class="bottom-nav"><div class="nav-item" data-path="/cards" onclick="location.href='/cards'">Cards</div><div class="nav-item active" data-path="/transactions" onclick="location.href='/transactions'">Transactions</div><div class="nav-item" data-path="/grace" onclick="location.href='/grace'">Grace</div><div class="nav-item" data-path="/settings" onclick="location.href='/settings'">Settings</div></div><script>applyTheme(); setActiveNav('/transactions'); function renderTxCards(){ const sel=document.getElementById('txCard'); sel.innerHTML=''; load(BANKS_KEY()).forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.textContent=b.name; sel.appendChild(o); }); } function validateTx(){ clearInvalid(document.getElementById('txDate')); clearInvalid(document.getElementById('txAmount')); const cardId = document.getElementById('txCard').value; const dateVal = document.getElementById('txDate').value; const amount = parseFloat(document.getElementById('txAmount').value); if(!cardId){ alert('Select a card'); return false; } if(!dateVal){ markInvalid(document.getElementById('txDate'),'Pick a date'); scrollToInvalid(document.getElementById('txDate')); return false; } if(isNaN(amount) || amount<=0){ markInvalid(document.getElementById('txAmount'),'Enter amount > 0'); scrollToInvalid(document.getElementById('txAmount')); return false; } return true; } function renderTxList(){ const txs = load(TX_KEY()); const banks = load(BANKS_KEY()); const el = document.getElementById('txList'); el.innerHTML=''; if(!txs.length){ el.innerHTML='<div class="small">No transactions yet.</div>'; return; } const today = new Date(); txs.forEach(t=>{ const b = banks.find(x=>x.id===t.bankId); if(!b) return; const purchase = new Date(t.date+'T00:00:00'); let due = new Date(purchase); due.setMonth(due.getMonth()+1); due.setDate(new Date(b.due+'T00:00:00').getDate()); const grace = daysDiff(purchase,due); const overdue = Math.max(0, daysDiff(due,today)); const interest = overdue>0 ? simpleInterest(t.amount, b.daily||0, overdue) : 0; const fine = overdue>0 ? (b.fine||0) : 0; const total = t.amount + interest + fine; const div = document.createElement('div'); div.className = 'tx-row'+(overdue>0?' overdue':''); div.innerHTML = `<div><strong>${t.desc||'Purchase'}</strong><div class="small">${fmt(purchase)} • Due ${fmt(due)} • Grace ${grace}d</div></div><div style="text-align:right"><div style="font-weight:700">${toEGP(t.amount)}</div><div class="small">Overdue: ${overdue}d</div><div class="small">Interest: ${toEGP(interest)}</div><div class="small">Fine: ${toEGP(fine)}</div><div style="margin-top:6px;font-weight:700">${toEGP(total)}</div></div>`; el.appendChild(div); }); } document.getElementById('addBtn').addEventListener('click', ()=>{ if(!validateTx()) return; const bankId = document.getElementById('txCard').value; const date = document.getElementById('txDate').value; const amount = parseFloat(document.getElementById('txAmount').value); const desc = document.getElementById('txDesc').value.trim(); const txs = load(TX_KEY()); const obj = { id: uid(), bankId, date, amount, desc }; txs.push(obj); save(TX_KEY(), txs); renderTxList(); document.getElementById('txDate').value=''; document.getElementById('txAmount').value=''; document.getElementById('txDesc').value=''; }); document.getElementById('clearBtn').addEventListener('click', ()=>{ document.getElementById('txDate').value=''; document.getElementById('txAmount').value=''; document.getElementById('txDesc').value=''; }); document.addEventListener('DOMContentLoaded', ()=>{ renderTxCards(); renderTxList(); });</script></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GraceWise — Transactions</title>
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    /* Inline adjustments to match theme */
+    .container{max-width:960px;margin:14px auto;padding:12px}
+    .panel{background:#fff;border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:0 8px 30px rgba(12,20,30,0.06)}
+    label{display:block;margin-top:10px;color:#374151;font-weight:600;font-size:13px}
+    input,select,textarea,button{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef6;background:#fff;font-size:14px}
+    .small{font-size:13px;color:#6b7280}
+    .row{display:flex;gap:10px}
+    .col{flex:1}
+    .tx-actions button{margin-right:8px}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:left;font-size:14px}
+    th{background:#f7fafc}
+    .status-badge{font-weight:700}
+    .progress-wrap{height:8px;background:rgba(0,0,0,0.06);border-radius:6px;overflow:hidden}
+    .progress{height:100%;transition:width .4s;background:linear-gradient(90deg,#005BAC,#F37021)}
+    .field-error{color:#b91c1c;font-size:12px;margin-top:6px}
+    .invalid{outline:2px solid rgba(185,28,28,0.08)}
+    .bottom-nav{position:fixed;left:0;right:0;bottom:0;height:64px;display:flex;align-items:center;justify-content:space-around;background:linear-gradient(90deg,#005BAC,#F37021);color:#fff}
+    .bottom-nav .nav-item{flex:1;text-align:center;color:#fff;font-weight:600;font-size:14px;padding:8px;cursor:pointer}
+    .tx-empty{color:#888;text-align:center;padding:12px}
+    @media(max-width:720px){ .row{flex-direction:column} .container{padding:10px} }
+  </style>
+</head>
+<body>
+  <div class="header" style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:linear-gradient(90deg,#005BAC,#F37021);color:#fff">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="logo" style="font-weight:800;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.06)">GW</div>
+      <div>
+        <div style="font-weight:700;font-size:18px">GraceWise</div>
+        <div class="small" style="color:rgba(255,255,255,0.9)">Transactions</div>
+      </div>
+    </div>
+    <div>
+      <button onclick="location.href='/cards'" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;border-radius:8px">Cards</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Transaction Form -->
+    <div class="panel" id="txFormPanel">
+      <h3>Record Transaction</h3>
+      <div class="small">Select card, date and amount. Transactions will be used for grace analysis and overdue calculations.</div>
+
+      <label>Card / Bank
+        <select id="txCard"></select>
+      </label>
+
+      <div class="row" style="margin-top:6px">
+        <div class="col">
+          <label>Purchase Date<input id="txDate" type="date"></label>
+        </div>
+        <div class="col">
+          <label>Amount (EGP)<input id="txAmount" type="number" step="0.01" min="0.01" placeholder="0.00"></label>
+        </div>
+      </div>
+
+      <label>Description (optional)<input id="txDesc" type="text" placeholder="e.g. supermarket"></label>
+
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button id="saveTxBtn">Save Transaction</button>
+        <button id="cancelEditBtn" style="background:#f3f4f6">Cancel</button>
+        <button id="downloadTxBtn" style="margin-left:auto;background:#fff;border:1px solid #e6eef6">Export</button>
+      </div>
+    </div>
+
+    <!-- Analytics Table -->
+    <div class="panel" id="txPanel">
+      <h3>Transactions & Grace Analysis</h3>
+      <div class="small">Each transaction shows calculated due date, grace days, overdue interest and the total due (if any).</div>
+
+      <table id="txTable" aria-label="Transactions table">
+        <thead>
+          <tr>
+            <th>Card</th>
+            <th>Purchase</th>
+            <th>Amount</th>
+            <th>Due</th>
+            <th>Status</th>
+            <th>Interest</th>
+            <th>Total Due</th>
+            <th style="width:120px;text-align:center">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="txTableBody">
+          <tr><td colspan="8" class="tx-empty">Loading transactions...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="location.href='/cards'">Cards</div>
+    <div class="nav-item active" onclick="location.href='/transactions'">Transactions</div>
+    <div class="nav-item" onclick="location.href='/grace'">Grace</div>
+    <div class="nav-item" onclick="location.href='/settings'">Settings</div>
+  </div>
+
+  <script src="core.js"></script>
+  <script>
+    // transactions.html v5.8.4 FULL — Recording + Analytics (client-side)
+    (function(){
+      // Helpers from core.js are expected:
+      // load, save, uid, BANKS_KEY, TX_KEY, markInvalid, clearInvalid, scrollToInvalid, syncToServer, fmt, toEGP (some provided below for safety)
+      function fmtLocal(d){ return d ? new Date(d).toLocaleDateString() : '-'; }
+      function toEGPLocal(n){ return 'EGP ' + Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+      const cardSel = document.getElementById('txCard');
+      const dateEl = document.getElementById('txDate');
+      const amountEl = document.getElementById('txAmount');
+      const descEl = document.getElementById('txDesc');
+      const saveBtn = document.getElementById('saveTxBtn');
+      const cancelBtn = document.getElementById('cancelEditBtn');
+      const downloadBtn = document.getElementById('downloadTxBtn');
+      const tableBody = document.getElementById('txTableBody');
+
+      let editingId = null;
+
+      function loadCardsToDropdown(){
+        const banks = load(BANKS_KEY());
+        cardSel.innerHTML = '';
+        if(!banks.length){
+          const o=document.createElement('option'); o.value=''; o.textContent='-- No saved cards --'; cardSel.appendChild(o); return;
+        }
+        const placeholder = document.createElement('option'); placeholder.value=''; placeholder.textContent='-- Select card --'; cardSel.appendChild(placeholder);
+        banks.forEach(b=>{
+          const o=document.createElement('option'); o.value=b.id; o.textContent=b.name; cardSel.appendChild(o);
+        });
+      }
+
+      function validateTxForm(){
+        // clear previous
+        [cardSel, dateEl, amountEl].forEach(el=>clearInvalid(el));
+        let firstInvalid = null;
+        if(!cardSel.value){ markInvalid(cardSel,'Choose a card'); firstInvalid = firstInvalid||cardSel; }
+        if(!dateEl.value){ markInvalid(dateEl,'Pick a date'); firstInvalid = firstInvalid||dateEl; }
+        const amt = parseFloat(amountEl.value||'0'); if(isNaN(amt) || amt<=0){ markInvalid(amountEl,'Amount must be > 0'); firstInvalid = firstInvalid||amountEl; }
+        if(firstInvalid){ scrollToInvalid(firstInvalid); return false; }
+        return true;
+      }
+
+      function getTxs(){ return load(TX_KEY()); }
+      function getCards(){ return load(BANKS_KEY()); }
+
+      function computeTxDetails(tx){
+        // tx: { id, bankId (cardId), date, amount, desc }
+        const card = getCards().find(c=>c.id===tx.bankId);
+        if(!card){
+          return { tx, cardName:'[no card]', dueDate:null, graceDays:0, status:'No card', color:'#888', interest:0, totalDue:tx.amount||0, progress:0 };
+        }
+
+        const cycleEnd = parseInt(card.end || 21);
+        const dueDay = parseInt(card.due || 15);
+        const annual = parseFloat(card.rate || 0);
+        const daily = parseFloat(card.daily || (annual/365));
+        const fine = parseFloat(card.fine || 0);
+        const amount = parseFloat(tx.amount||0);
+
+        const purchase = new Date(tx.date || tx.purchaseDate || tx.purchase || new Date());
+        const pDay = purchase.getDate();
+        const pMonth = purchase.getMonth();
+        const pYear = purchase.getFullYear();
+
+        let cycleMonth = pMonth;
+        let cycleYear = pYear;
+        if (pDay > cycleEnd){
+          cycleMonth += 1;
+          if(cycleMonth > 11){ cycleMonth = 0; cycleYear += 1; }
+        }
+
+        let dueMonth = cycleMonth + 1;
+        let dueYear = cycleYear;
+        if(dueMonth > 11){ dueMonth = 0; dueYear += 1; }
+        const dueDate = new Date(dueYear, dueMonth, dueDay);
+
+        const graceDays = Math.round((dueDate - purchase) / (1000*60*60*24));
+        const today = new Date();
+        const daysLeft = Math.round((dueDate - today)/(1000*60*60*24));
+
+        let status = '', color = '', interest = 0, totalDue = amount;
+        if(daysLeft > 0){
+          status = `🟢 In grace (${daysLeft} days left)`;
+          color = '#059669';
+        } else if(daysLeft === 0){
+          status = '🟡 Due today';
+          color = '#f59e0b';
+        } else {
+          const overdueDays = Math.abs(daysLeft);
+          interest = amount * (daily/100) * overdueDays;
+          totalDue = amount + interest + fine;
+          status = `🔴 Overdue by ${overdueDays} days`;
+          color = '#dc2626';
+        }
+
+        const progress = graceDays>0 ? Math.min(Math.round(((graceDays - daysLeft)/graceDays)*100),100) : 100;
+
+        return {
+          txId: tx.id,
+          cardName: card.name,
+          purchase,
+          amount,
+          dueDate,
+          graceDays,
+          daysLeft,
+          status,
+          color,
+          interest,
+          totalDue,
+          progress,
+          desc: tx.desc || ''
+        };
+      }
+
+      function renderTable(){
+        const txs = getTxs();
+        tableBody.innerHTML = '';
+        if(!txs.length){
+          tableBody.innerHTML = '<tr><td colspan="8" class="tx-empty">No transactions found</td></tr>';
+          return;
+        }
+        txs.forEach(t=>{
+          const d = computeTxDetails({ id:t.id, bankId:t.bankId, date:t.date || t.purchaseDate || t.purchase, amount:t.amount, desc:t.desc });
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${d.cardName}</td>
+            <td>${fmtLocal(d.purchase)}</td>
+            <td>${toEGPLocal(d.amount)}</td>
+            <td>${fmtLocal(d.dueDate)}</td>
+            <td style="color:${d.color};font-weight:700">${d.status}</td>
+            <td>${d.interest ? toEGPLocal(d.interest) : '-'}</td>
+            <td>${toEGPLocal(d.totalDue)}</td>
+            <td style="text-align:center" class="tx-actions">
+              <button data-id="${t.id}" class="editBtn">Edit</button>
+              <button data-id="${t.id}" class="delBtn" style="background:#fee2e2">Delete</button>
+            </td>
+          `;
+          tableBody.appendChild(tr);
+
+          // progress bar row
+          const pr = document.createElement('tr');
+          pr.innerHTML = `<td colspan="8"><div class="progress-wrap"><div class="progress" style="width:${d.progress}%;background:linear-gradient(90deg,#005BAC,#F37021)"></div></div></td>`;
+          tableBody.appendChild(pr);
+        });
+
+        // attach actions
+        document.querySelectorAll('.editBtn').forEach(b=>{
+          b.addEventListener('click', (ev)=>{
+            const id = ev.currentTarget.dataset.id;
+            startEdit(id);
+          });
+        });
+        document.querySelectorAll('.delBtn').forEach(b=>{
+          b.addEventListener('click', async (ev)=>{
+            const id = ev.currentTarget.dataset.id;
+            if(!confirm('Delete this transaction?')) return;
+            let arr = getTxs().filter(x=>x.id!==id);
+            save(TX_KEY(), arr);
+            renderTable();
+            try{ await syncToServer(); }catch(e){}
+          });
+        });
+      }
+
+      function resetForm(){
+        editingId = null;
+        cardSel.value = '';
+        dateEl.value = '';
+        amountEl.value = '';
+        descEl.value = '';
+        saveBtn.textContent = 'Save Transaction';
+      }
+
+      function startEdit(id){
+        const arr = getTxs();
+        const tx = arr.find(x=>x.id===id);
+        if(!tx) return alert('Transaction not found');
+        editingId = id;
+        cardSel.value = tx.bankId;
+        dateEl.value = tx.date || tx.purchaseDate || tx.purchase;
+        amountEl.value = tx.amount;
+        descEl.value = tx.desc || '';
+        saveBtn.textContent = 'Update Transaction';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      async function saveTransaction(){
+        if(!validateTxForm()) return;
+        const bankId = cardSel.value;
+        const date = dateEl.value;
+        const amount = parseFloat(amountEl.value);
+        const desc = descEl.value.trim();
+
+        let txs = getTxs();
+        if(editingId){
+          // update
+          const idx = txs.findIndex(x=>x.id===editingId);
+          if(idx>=0){ txs[idx].bankId = bankId; txs[idx].date = date; txs[idx].amount = amount; txs[idx].desc = desc; }
+        } else {
+          const obj = { id: uid(), bankId: bankId, date: date, amount: amount, desc: desc };
+          txs.push(obj);
+        }
+        save(TX_KEY(), txs);
+        renderTable();
+        resetForm();
+        try { await syncToServer(); } catch(e){}
+      }
+
+      // download/export transactions
+      function downloadTxFile(){
+        const payload = { transactions: getTxs(), exportedAt: new Date().toISOString() };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download = `gracewise_transactions_${currentUserId()||'guest'}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      }
+
+      // bind events
+      saveBtn.addEventListener('click', saveTransaction);
+      cancelBtn.addEventListener('click', resetForm);
+      downloadBtn.addEventListener('click', downloadTxFile);
+
+      // initial load
+      document.addEventListener('DOMContentLoaded', ()=>{
+        loadCardsToDropdown();
+        renderTable();
+      });
+
+      // Also refresh when cards change (e.g. user edits card in cards page then returns)
+      window.addEventListener('focus', ()=>{
+        loadCardsToDropdown();
+        renderTable();
+      });
+
+    })();
+  </script>
+</body>
+</html>
