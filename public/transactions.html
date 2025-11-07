@@ -1,394 +1,52 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GraceWise — Transactions</title>
-  <link rel="stylesheet" href="theme.css">
-  <style>
-    /* Inline adjustments to match theme */
-  /* === Layout and Table Size Alignment Fix === */
-.container {
-  max-width: 100%;
-  padding: 12px 10px;
-  margin: 0 auto;
-  box-sizing: border-box;
-}
-
-.panel {
-  width: 100%;
-  max-width: 950px;
-  margin: 0 auto 14px;
-  padding: 14px;
-  border-radius: 10px;
-  box-sizing: border-box;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-th, td {
-  padding: 10px 8px;
-  word-wrap: break-word;
-  text-align: left;
-}
-
-@media (max-width: 768px) {
-  th, td { font-size: 12.5px; }
-  .panel { padding: 10px; }
-  .container { padding: 8px; }
-}  </style>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Transactions - GraceWise v5.9</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  body{font-family:Inter,Arial;background:#0f0f0f;color:#e6e6e6;margin:0;padding-bottom:70px}
+  .container{max-width:950px;margin:12px auto;padding:12px;box-sizing:border-box}
+  .panel{background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:left}
+  th{color:#a8b0b7;font-size:12px;text-transform:uppercase}
+  .tx-empty{color:#8a9399;text-align:center;padding:12px}
+</style>
 </head>
 <body>
-  <div class="header" style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:linear-gradient(90deg,#005BAC,#F37021);color:#fff">
-    <div style="display:flex;gap:12px;align-items:center">
-      <div class="logo" style="font-weight:800;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.06)">GW</div>
-      <div>
-        <div style="font-weight:700;font-size:18px">GraceWise</div>
-        <div class="small" style="color:rgba(255,255,255,0.9)">Transactions</div>
-      </div>
+<header style="background:linear-gradient(90deg,#005BAC,#F37021);padding:14px;color:#fff;text-align:center;font-weight:700">GraceWise — Transactions</header>
+<div class="container">
+  <div class="panel" id="formPanel">
+    <h3 style="margin:0 0 8px">Record Transaction</h3>
+    <label>Card/Bank<select id="txCard"></select></label>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="txDate" type="date" style="flex:1">
+      <input id="txAmount" type="number" step="0.01" min="0.01" placeholder="Amount EGP" style="flex:1">
     </div>
-    <div>
-      <button onclick="location.href='/cards'" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:#fff;padding:8px 12px;border-radius:8px">Cards</button>
-    </div>
-  </div>
-
-  <div class="container">
-    <!-- Transaction Form -->
-    <div class="panel" id="txFormPanel">
-      <h3>Record Transaction</h3>
-      <div class="small">Select card, date and amount. Transactions will be used for grace analysis and overdue calculations.</div>
-
-      <label>Card / Bank
-        <select id="txCard"></select>
-      </label>
-
-      <div class="row" style="margin-top:6px">
-        <div class="col">
-          <label>Purchase Date<input id="txDate" type="date"></label>
-        </div>
-        <div class="col">
-          <label>Amount (EGP)<input id="txAmount" type="number" step="0.01" min="0.01" placeholder="0.00"></label>
-        </div>
-      </div>
-
-      <label>Description (optional)<input id="txDesc" type="text" placeholder="e.g. supermarket"></label>
-
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button id="saveTxBtn">Save Transaction</button>
-        <button id="cancelEditBtn" style="background:#f3f4f6">Cancel</button>
-        <button id="downloadTxBtn" style="margin-left:auto;background:#fff;border:1px solid #e6eef6">Export</button>
-      </div>
-    </div>
-
-    <!-- Analytics Table -->
-    <div class="panel" id="txPanel">
-      <h3>Transactions & Grace Analysis</h3>
-      <div class="small">Each transaction shows calculated due date, grace days, overdue interest and the total due (if any).</div>
-
-      <table id="txTable" aria-label="Transactions table">
-        <thead>
-          <tr>
-            <th>Card</th>
-            <th>Purchase</th>
-            <th>Amount</th>
-            <th>Due</th>
-            <th>Status</th>
-            <th>Interest</th>
-            <th>Total Due</th>
-            <th style="width:120px;text-align:center">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="txTableBody">
-          <tr><td colspan="8" class="tx-empty">Loading transactions...</td></tr>
-        </tbody>
-      </table>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="txDesc" placeholder="Description" style="flex:1">
+      <button id="saveTxBtn" style="padding:8px 12px;background:linear-gradient(90deg,#005BAC,#F37021);color:#fff;border-radius:8px">Save</button>
     </div>
   </div>
 
-  <div class="bottom-nav">
-    <div class="nav-item" onclick="location.href='/cards'">Cards</div>
-    <div class="nav-item active" onclick="location.href='/transactions'">Transactions</div>
-    <div class="nav-item" onclick="location.href='/grace'">Grace</div>
-    <div class="nav-item" onclick="location.href='/settings'">Settings</div>
+  <div class="panel">
+    <h3 style="margin:0 0 8px">Transactions & Analysis</h3>
+    <table><thead><tr><th>Card</th><th>Purchase</th><th>Amount</th><th>Due</th><th>Status</th><th>Interest</th><th>Total</th><th>Actions</th></tr></thead>
+    <tbody id="txTableBody"><tr><td colspan="8" class="tx-empty">Loading...</td></tr></tbody></table>
   </div>
+</div>
 
-  <script src="core.js"></script>
-  <script>
-    // transactions.html v5.8.4 FULL — Recording + Analytics (client-side)
-    (function(){
-      // Helpers from core.js are expected:
-      // load, save, uid, BANKS_KEY, TX_KEY, markInvalid, clearInvalid, scrollToInvalid, syncToServer, fmt, toEGP (some provided below for safety)
-      function fmtLocal(d){ return d ? new Date(d).toLocaleDateString() : '-'; }
-      function toEGPLocal(n){ return 'EGP ' + Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-
-      const cardSel = document.getElementById('txCard');
-      const dateEl = document.getElementById('txDate');
-      const amountEl = document.getElementById('txAmount');
-      const descEl = document.getElementById('txDesc');
-      const saveBtn = document.getElementById('saveTxBtn');
-      const cancelBtn = document.getElementById('cancelEditBtn');
-      const downloadBtn = document.getElementById('downloadTxBtn');
-      const tableBody = document.getElementById('txTableBody');
-
-      let editingId = null;
-
-      function loadCardsToDropdown(){
-        const banks = load(BANKS_KEY());
-        cardSel.innerHTML = '';
-        if(!banks.length){
-          const o=document.createElement('option'); o.value=''; o.textContent='-- No saved cards --'; cardSel.appendChild(o); return;
-        }
-        const placeholder = document.createElement('option'); placeholder.value=''; placeholder.textContent='-- Select card --'; cardSel.appendChild(placeholder);
-        banks.forEach(b=>{
-          const o=document.createElement('option'); o.value=b.id; o.textContent=b.name; cardSel.appendChild(o);
-        });
-      }
-
-      function validateTxForm(){
-        // clear previous
-        [cardSel, dateEl, amountEl].forEach(el=>clearInvalid(el));
-        let firstInvalid = null;
-        if(!cardSel.value){ markInvalid(cardSel,'Choose a card'); firstInvalid = firstInvalid||cardSel; }
-        if(!dateEl.value){ markInvalid(dateEl,'Pick a date'); firstInvalid = firstInvalid||dateEl; }
-        const amt = parseFloat(amountEl.value||'0'); if(isNaN(amt) || amt<=0){ markInvalid(amountEl,'Amount must be > 0'); firstInvalid = firstInvalid||amountEl; }
-        if(firstInvalid){ scrollToInvalid(firstInvalid); return false; }
-        return true;
-      }
-
-      function getTxs(){ return load(TX_KEY()); }
-      function getCards(){ return load(BANKS_KEY()); }
-
-      // --- Robust date parsing helper ---
-function parsePurchaseDate(value){
-  // Accept Date object
-  if(value instanceof Date && !isNaN(value)) return value;
-
-  // If already ISO (YYYY-MM-DD) — safe for Date
-  if(/^\d{4}-\d{2}-\d{2}$/.test(value)){
-    const d = new Date(value + 'T00:00:00');
-    if(!isNaN(d)) return d;
-  }
-
-  // If DD/MM/YYYY
-  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)){
-    const parts = value.split('/');
-    const day = parseInt(parts[0],10);
-    const month = parseInt(parts[1],10) - 1; // zero-based
-    const year = parseInt(parts[2],10);
-    const d = new Date(year, month, day);
-    if(!isNaN(d)) return d;
-  }
-
-  // Try fallback (safe): attempt Date constructor; if invalid, return today's date
-  const f = new Date(value);
-  if(!isNaN(f)) return f;
-  return new Date(); // last resort
-}
-
-// --- Corrected computeTxDetails ---
-function computeTxDetails(tx){
-  // tx: { id, bankId, date, amount, desc }
-  const card = getCards().find(c=>c.id===tx.bankId);
-  if(!card){
-    return { tx, cardName:'[no card]', dueDate:null, graceDays:0, status:'No card', color:'#888', interest:0, totalDue:tx.amount||0, progress:0 };
-  }
-
-  const cycleEnd = parseInt(card.end || 21, 10);      // e.g. 21
-  const dueDay = parseInt(card.due || 15, 10);        // e.g. 15
-  const annual = parseFloat(card.rate || 0);
-  const daily = parseFloat(card.daily || (annual/365));
-  const fine = parseFloat(card.fine || 0);
-  const amount = parseFloat(tx.amount||0);
-
-  // Parse purchase date robustly
-  const purchase = parsePurchaseDate(tx.date || tx.purchaseDate || tx.purchase);
-  const pDay = purchase.getDate();
-  const pMonth = purchase.getMonth(); // 0-based
-  const pYear = purchase.getFullYear();
-
-  // Determine which billing cycle month this purchase belongs to
-  let cycleMonth = pMonth;
-  let cycleYear = pYear;
-  if(pDay > cycleEnd){
-    cycleMonth += 1;
-    if(cycleMonth > 11){ cycleMonth = 0; cycleYear += 1; }
-  }
-
-  // Due date is the dueDay of the month AFTER the cycleMonth
-  let dueMonth = cycleMonth + 1;
-  let dueYear = cycleYear;
-  if(dueMonth > 11){ dueMonth = 0; dueYear += 1; }
-
-  // If dueDay is greater than last day of month (e.g., 31 in Feb), clamp to month's last day
-  const lastDay = new Date(dueYear, dueMonth + 1, 0).getDate(); // last day of dueMonth
-  const safeDueDay = Math.min(dueDay, lastDay);
-  const dueDate = new Date(dueYear, dueMonth, safeDueDay);
-
-  // Grace days (days between purchase and due date)
-  const graceDays = Math.round((dueDate - purchase) / (1000*60*60*24));
-
-  // Status & interest logic
-  const today = new Date();
-  const daysLeft = Math.round((dueDate - today) / (1000*60*60*24));
-  let status = '', color = '', interest = 0, totalDue = amount;
-
-  if(daysLeft > 0){
-    status = `🟢 In grace (${daysLeft} days left)`;
-    color = '#059669';
-  } else if(daysLeft === 0){
-    status = '🟡 Due today';
-    color = '#f59e0b';
-  } else {
-    const overdueDays = Math.abs(daysLeft);
-    interest = amount * (daily / 100) * overdueDays;
-    totalDue = amount + interest + fine;
-    status = `🔴 Overdue by ${overdueDays} days`;
-    color = '#dc2626';
-  }
-
-  const progress = graceDays > 0 ? Math.min(Math.round(((graceDays - daysLeft) / graceDays) * 100), 100) : 100;
-
-  return {
-    txId: tx.id,
-    cardName: card.name,
-    purchase,
-    amount,
-    dueDate,
-    graceDays,
-    daysLeft,
-    status,
-    color,
-    interest,
-    totalDue,
-    progress,
-    desc: tx.desc || ''
-  };
-}
-
-      function renderTable(){
-        const txs = getTxs();
-        tableBody.innerHTML = '';
-        if(!txs.length){
-          tableBody.innerHTML = '<tr><td colspan="8" class="tx-empty">No transactions found</td></tr>';
-          return;
-        }
-        txs.forEach(t=>{
-          const d = computeTxDetails({ id:t.id, bankId:t.bankId, date:t.date || t.purchaseDate || t.purchase, amount:t.amount, desc:t.desc });
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${d.cardName}</td>
-            <td>${fmtLocal(d.purchase)}</td>
-            <td>${toEGPLocal(d.amount)}</td>
-            <td>${fmtLocal(d.dueDate)}</td>
-            <td style="color:${d.color};font-weight:700">${d.status}</td>
-            <td>${d.interest ? toEGPLocal(d.interest) : '-'}</td>
-            <td>${toEGPLocal(d.totalDue)}</td>
-            <td style="text-align:center" class="tx-actions">
-              <button data-id="${t.id}" class="editBtn">Edit</button>
-              <button data-id="${t.id}" class="delBtn" style="background:#fee2e2">Delete</button>
-            </td>
-          `;
-          tableBody.appendChild(tr);
-
-          // progress bar row
-          const pr = document.createElement('tr');
-          pr.innerHTML = `<td colspan="8"><div class="progress-wrap"><div class="progress" style="width:${d.progress}%;background:linear-gradient(90deg,#005BAC,#F37021)"></div></div></td>`;
-          tableBody.appendChild(pr);
-        });
-
-        // attach actions
-        document.querySelectorAll('.editBtn').forEach(b=>{
-          b.addEventListener('click', (ev)=>{
-            const id = ev.currentTarget.dataset.id;
-            startEdit(id);
-          });
-        });
-        document.querySelectorAll('.delBtn').forEach(b=>{
-          b.addEventListener('click', async (ev)=>{
-            const id = ev.currentTarget.dataset.id;
-            if(!confirm('Delete this transaction?')) return;
-            let arr = getTxs().filter(x=>x.id!==id);
-            save(TX_KEY(), arr);
-            renderTable();
-            try{ await syncToServer(); }catch(e){}
-          });
-        });
-      }
-
-      function resetForm(){
-        editingId = null;
-        cardSel.value = '';
-        dateEl.value = '';
-        amountEl.value = '';
-        descEl.value = '';
-        saveBtn.textContent = 'Save Transaction';
-      }
-
-      function startEdit(id){
-        const arr = getTxs();
-        const tx = arr.find(x=>x.id===id);
-        if(!tx) return alert('Transaction not found');
-        editingId = id;
-        cardSel.value = tx.bankId;
-        dateEl.value = tx.date || tx.purchaseDate || tx.purchase;
-        amountEl.value = tx.amount;
-        descEl.value = tx.desc || '';
-        saveBtn.textContent = 'Update Transaction';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-
-      async function saveTransaction(){
-        if(!validateTxForm()) return;
-        const bankId = cardSel.value;
-        const date = dateEl.value;
-        const amount = parseFloat(amountEl.value);
-        const desc = descEl.value.trim();
-
-        let txs = getTxs();
-        if(editingId){
-          // update
-          const idx = txs.findIndex(x=>x.id===editingId);
-          if(idx>=0){ txs[idx].bankId = bankId; txs[idx].date = date; txs[idx].amount = amount; txs[idx].desc = desc; }
-        } else {
-          const obj = { id: uid(), bankId: bankId, date: date, amount: amount, desc: desc };
-          txs.push(obj);
-        }
-        save(TX_KEY(), txs);
-        renderTable();
-        resetForm();
-        try { await syncToServer(); } catch(e){}
-      }
-
-      // download/export transactions
-      function downloadTxFile(){
-        const payload = { transactions: getTxs(), exportedAt: new Date().toISOString() };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a=document.createElement('a'); a.href=url; a.download = `gracewise_transactions_${currentUserId()||'guest'}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      }
-
-      // bind events
-      saveBtn.addEventListener('click', saveTransaction);
-      cancelBtn.addEventListener('click', resetForm);
-      downloadBtn.addEventListener('click', downloadTxFile);
-
-      // initial load
-      document.addEventListener('DOMContentLoaded', ()=>{
-        loadCardsToDropdown();
-        renderTable();
-      });
-
-      // Also refresh when cards change (e.g. user edits card in cards page then returns)
-      window.addEventListener('focus', ()=>{
-        loadCardsToDropdown();
-        renderTable();
-      });
-
-    })();
-  </script>
-</body>
-</html>
+<script src="core.js"></script>
+<script>
+function load(k){ try{ return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]} }
+function save(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function uid(){ return 'tx_' + Math.random().toString(36).slice(2,9); }
+const CARD_KEY = (typeof BANKS_KEY === 'function') ? BANKS_KEY() : 'gw_banks_guest';
+const TX_KEY_NAME = (typeof TX_KEY === 'function') ? TX_KEY() : 'gw_tx_guest';
+function getCards(){ return load(CARD_KEY); }
+function getTxs(){ return load(TX_KEY_NAME); }
+function populateCards(){ const sel=document.getElementById('txCard'); sel.innerHTML=''; const cards=getCards(); if(!cards.length){ sel.innerHTML='<option value="">-- No cards --</option>'; return; } sel.innerHTML='<option value="">-- Select card --</option>'; cards.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.text=c.name; sel.appendChild(o); }); }
+function renderTable(){ const tbody=document.getElementById('txTableBody'); tbody.innerHTML=''; const txs=getTxs()||[]; if(!txs.length){ tbody.innerHTML='<tr><td colspan="8" class="tx-empty">No transactions</td></tr>'; return; } const cards=getCards(); const map={}; cards.forEach(c=>map[c.id]=c); txs.forEach(t=>{ const card = map[t.bankId] || map[t.cardId] || {name:'Unknown', end:21, due:15, rate:0, daily:0, fine:0}; const analysis = computeTransactionAnalysis(t, card, new Date()); const tr=document.createElement('tr'); tr.innerHTML = '<td>'+(card.name||'-')+'</td>' + '<td>'+(analysis.purchase?analysis.purchase.toLocaleDateString():'-')+'</td>' + '<td>'+(t.amount?('EGP '+Number(t.amount).toLocaleString()):'-')+'</td>' + '<td>'+(analysis.dueDate?analysis.dueDate.toLocaleDateString():'-')+'</td>' + '<td style="color:'+analysis.color+';font-weight:700">'+analysis.status+'</td>' + '<td>'+(analysis.interest?('EGP '+analysis.interest.toFixed(2)):'-')+'</td>' + '<td>'+(analysis.totalDue?('EGP '+analysis.totalDue.toFixed(2)):'-')+'</td>' + '<td><button class="edit" data-id="'+t.id+'">Edit</button> <button class="del" data-id="'+t.id+'">Del</button></td>'; tbody.appendChild(tr); }); document.querySelectorAll('.del').forEach(b=> b.addEventListener('click', e=>{ if(!confirm('Delete?')) return; const id=e.currentTarget.dataset.id; const arr=getTxs().filter(x=>x.id!==id); save(TX_KEY_NAME,arr); renderTable(); })); document.querySelectorAll('.edit').forEach(b=> b.addEventListener('click', e=>{ const id=e.currentTarget.dataset.id; const tx=getTxs().find(x=>x.id===id); if(!tx) return; document.getElementById('txCard').value = tx.bankId || tx.cardId || ''; document.getElementById('txDate').value = (tx.date || tx.purchaseDate || tx.purchase) || ''; document.getElementById('txAmount').value = tx.amount || ''; document.getElementById('txDesc').value = tx.desc || ''; localStorage.setItem('__editing_tx', id); })); }
+document.getElementById('saveTxBtn').addEventListener('click', ()=>{ const cardId=document.getElementById('txCard').value; const date=document.getElementById('txDate').value; const amount=parseFloat(document.getElementById('txAmount').value||0); const desc=document.getElementById('txDesc').value||''; if(!cardId){ alert('Select card'); return; } if(!date){ alert('Pick date'); return; } if(!amount || amount<=0){ alert('Enter amount'); return; } const editing = localStorage.getItem('__editing_tx'); let arr=getTxs()||[]; if(editing){ const idx=arr.findIndex(x=>x.id===editing); if(idx>=0){ arr[idx].bankId=cardId; arr[idx].date=date; arr[idx].amount=amount; arr[idx].desc=desc;} localStorage.removeItem('__editing_tx'); } else { arr.push({ id: uid(), bankId: cardId, date: date, amount: amount, desc: desc }); } save(TX_KEY_NAME, arr); renderTable(); try{ if(typeof syncToServer === 'function') syncToServer(); }catch(e){} document.getElementById('txCard').value=''; document.getElementById('txDate').value=''; document.getElementById('txAmount').value=''; document.getElementById('txDesc').value=''; });
+populateCards(); renderTable();
+</script>
+</body></html>
