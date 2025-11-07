@@ -105,6 +105,33 @@
     banks.forEach(b=> map[b.id] = b);
     return (txs || []).map(tx => { const card = map[tx.bankId] || map[tx.cardId] || { end:21, due:15, rate:0, daily:0, fine:0, name:'Unknown' }; return { tx, analysis: computeTransactionAnalysis(tx, card, today) }; });
   }
+  
+// Core patch for login + forgot password integration
+async function forgotPassword(email) {
+  try {
+    const res = await fetch("/api/forgot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+    return await res.json();
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+async function resetPassword(email, code, newPassword) {
+  try {
+    const res = await fetch("/api/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, newPassword })
+    });
+    return await res.json();
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
 
   window.parseDateSafe = window.parseDateSafe || parseDateSafe;
   window.extractDayOfMonth = window.extractDayOfMonth || extractDayOfMonth;
